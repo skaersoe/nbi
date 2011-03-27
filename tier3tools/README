@@ -11,6 +11,7 @@ A suite of command lines tools for manipulating and querying the storage element
  
  	t3ls /user/username
 	t3ls -f /user/
+	t3ls -x /user/username/ntuples/
  
  Flags: 
 
@@ -63,6 +64,6 @@ A suite of command lines tools for manipulating and querying the storage element
  Usage:
  
     t3rm /user/username/myfolder
- 	t3rm /user/usernanme/myfile.root
+    t3rm /user/usernanme/myfile.root
  
     
