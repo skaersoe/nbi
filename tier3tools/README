@@ -1,0 +1,68 @@
+NBI HEP Tier 3 storage element client tools
+
+A suite of command lines tools for manipulating and querying the storage element.
+
+
+
+
+ * t3ls - List structure
+ 
+ Usage: 
+ 
+ 	t3ls /user/username
+	t3ls -f /user/
+ 
+ Flags: 
+
+    -l :    Print date modified, file size and filenames (default)
+    -x :    Print SFrame XML input lines
+    -f :    Print full path
+
+
+
+ * t3get - Download file
+ 
+ Usage:
+    
+    t3get /user/username/rootfile.root myrootfile.root
+
+
+ * t3mkdir - Create directory
+ 
+ Usage:
+ 
+ 	Create one folder on the storage element
+	t3mkdir /user/username/new_folder
+	
+	Create multiple folders on the storage element
+	t3mkdir /user/username/new_folder /user/username/another_folder /user/folderx
+
+ 
+ * t3mv - Move files on storage element
+ 
+ 
+ Usage:
+ 
+    t3mv /user/username/rootfile.root /user/username/myrootfile.root
+    
+    
+ * t3put - Upload file
+ 
+ Usage:
+ 
+    Upload a file with a new name:
+	t3cp rootfile.root /user/username/myrootfile.root
+	
+	Upload multiple files to a folder (the file names will not change)
+	t3cp demofile.txt demofile1.txt demofile2.txt /user/username/
+	t3cp *.root /user/username/folder/
+	
+	
+ * t3rm  - Remove file
+ 
+ Usage:
+ 
+    t3rm /user/username/myfolder
+ 	t3rm /user/usernanme/myfile.root
+ 
+    
