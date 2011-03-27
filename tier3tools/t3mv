@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+# encoding: utf-8
+"""
+untitled.py
+
+Created by Morten Dam Jørgensen on 2011-03-03.
+Copyright (c) 2011 Niels Bohr Institute. All rights reserved.
+"""
+
+BASE_URL = "https://ftp1.ndgf.org:2881/atlas/disk/atlaslocalgroupdisk/dk%s"
+BASE_URL_STR = "https://ftp1.ndgf.org:2881/atlas/disk/atlaslocalgroupdisk/dk"
+
+import sys
+import getopt
+# import pycurl
+import os
+
+import shlex, subprocess
+from getpass import getpass
+
+help_message = '''
+Move a file on the Tier 3 storage element.
+Author: Morten Dam Jørgensen, 2011
+
+Examples:
+
+	t3mv /user/username/rootfile.root /user/username/myrootfile.root
+
+	
+'''
+
+class NBIWebDAV(object):
+	"""Communication with the Tier 3 storage element via WebDAV"""
+	def __init__(self, pw=""):
+		super(NBIWebDAV, self).__init__()
+		self.homedir = os.path.expanduser('~')
+		try:
+		    pw_file = open("%s/.globus/t3password" % self.homedir, "r")
+		    self.pw = pw_file.read()
+		    pw_file.close()
+		except:
+		    self.pw = getpass("Enter GRID password: ")
+
+
+		
+
+
+	def move(self, filename, destination, overwrite=False):
+		"""docstring for move"""
+		exe = 'curl  --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s --request MOVE --header "Destination: %s"' % (self.homedir, self.pw, self.homedir, filename, destination)
+		print exe
+		# return
+		
+		a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+		resp = a.communicate()[0]
+		
+		if resp.find("403") > -1 and overwrite:
+			inp = raw_input("File exists, overwrite? (y/n): ")
+			if str(inp) in ['y', 'yes', 'Y', 'YES', 'Yes']:
+				print self.delete(destination)
+				resp = 	 self.upload(filename, destination)
+		elif resp.find("403") > -1 and not overwrite:
+			print "Dammit"
+		
+		return resp
+		
+	
+		
+
+class Usage(Exception):
+	def __init__(self, msg):
+		self.msg = msg
+
+
+def main(argv=None):
+
+	if len(sys.argv) < 2 or "-h" in sys.argv:
+		print help_message
+		return
+		
+	wd = NBIWebDAV()
+	
+	dire = ""
+	print sys.argv
+
+	if sys.argv[2][0] == "/":
+		dire = sys.argv[2]
+	else:
+		dire = "/" + sys.argv[2]
+
+	if sys.argv[1][0] == "/":
+		fromf = sys.argv[1]
+	else:
+		fromf = "/" + sys.argv[1]
+		
+		
+	print wd.move(BASE_URL % fromf.replace(BASE_URL_STR, ""), BASE_URL % dire.replace(BASE_URL_STR, ""))
+		
+
+
+if __name__ == "__main__":
+	sys.exit(main())

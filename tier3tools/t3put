@@ -1,0 +1,110 @@
+#!/usr/bin/env python
+# encoding: utf-8
+"""
+untitled.py
+
+Created by Morten Dam Jørgensen on 2011-03-03.
+Copyright (c) 2011 Niels Bohr Institute. All rights reserved.
+"""
+
+BASE_URL = "https://ftp1.ndgf.org:2881/atlas/disk/atlaslocalgroupdisk/dk%s"
+BASE_URL_STR = "https://ftp1.ndgf.org:2881/atlas/disk/atlaslocalgroupdisk/dk"
+
+import sys
+import getopt
+# import pycurl
+import os
+
+import shlex, subprocess
+from getpass import getpass
+
+help_message = '''
+Upload file(s) to the Tier 3 storage element.
+Author: Morten Dam Jørgensen, 2011
+
+Examples:
+
+	Upload a file with a new name:
+	t3cp rootfile.root /user/username/myrootfile.root
+	
+	Upload multiple files to a folder (the file names will not change)
+	t3cp demofile.txt demofile1.txt demofile2.txt /user/username/
+	t3cp *.root /user/username/folder/
+	
+'''
+
+class NBIWebDAV(object):
+	"""Communication with the Tier 3 storage element via WebDAV"""
+	def __init__(self, pw=""):
+		super(NBIWebDAV, self).__init__()
+		self.homedir = os.path.expanduser('~')
+		try:
+		    pw_file = open("%s/.globus/t3password" % self.homedir, "r")
+		    self.pw = pw_file.read()
+		    pw_file.close()
+		except:
+		    self.pw = getpass("Enter GRID password: ")
+
+
+		
+
+
+	def upload(self, filename, destination, overwrite=False):
+		"""docstring for upload"""
+		exe = 'curl -# --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -T %s' % (self.homedir, self.pw, self.homedir, destination, filename)
+
+		a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+		resp = a.communicate()[0]
+		
+		if resp.find("403") > -1 and overwrite:
+			inp = raw_input("File exists, overwrite? (y/n): ")
+			if str(inp) in ['y', 'yes', 'Y', 'YES', 'Yes']:
+				print self.delete(destination)
+				resp = 	 self.upload(filename, destination)
+		elif resp.find("403") > -1 and not overwrite:
+			print "Dammit"
+		
+		return resp
+		
+		
+	def delete(self, path):
+		"""docstring for delete"""
+		exe = 'curl -s --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem --request DELETE %s' %(self.homedir, self.pw, self.homedir, path)
+		a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+		return a.communicate()[0]
+		
+
+class Usage(Exception):
+	def __init__(self, msg):
+		self.msg = msg
+
+
+def main(argv=None):
+
+	if len(sys.argv) < 2 or "-h" in sys.argv:
+		print help_message
+		return
+		
+	wd = NBIWebDAV()
+	
+	dire = ""
+
+	if sys.argv[-1][0] == "/":
+		dire = sys.argv[-1]
+	else:
+		dire = "/" + sys.argv[-1]
+		
+	if dire[-1] == "/" and len(sys.argv) > 3: ## If directory allow multiple uplaods
+		files = sys.argv[1:-1]
+		for filename in files:
+			dest = BASE_URL % dire.replace(BASE_URL_STR, "") + filename
+			print "Transfering %s ..." % dest
+			print wd.upload(filename, dest, overwrite=True)
+			
+	else:
+		print wd.upload(sys.argv[1], BASE_URL % dire.replace(BASE_URL_STR, ""))
+		
+
+
+if __name__ == "__main__":
+	sys.exit(main())

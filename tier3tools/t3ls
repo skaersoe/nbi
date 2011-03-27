@@ -1,0 +1,183 @@
+#!/usr/bin/env python
+# encoding: utf-8
+"""
+
+    t3ls (List files on the KU/Steno Tier 3 storage element)
+
+Created by Morten Dam Jørgensen on 2011-03-03.
+Copyright (c) 2011 Niels Bohr Institute. All rights reserved.
+"""
+
+BASE_URL = "https://ftp1.ndgf.org:2881/atlas/disk/atlaslocalgroupdisk/dk%s"
+BASE_URL_STR = "https://ftp1.ndgf.org:2881/atlas/disk/atlaslocalgroupdisk/dk"
+
+BASE_URL_XROOT = "root://ftp1.ndgf.org/atlas/disk/atlaslocalgroupdisk/dk"
+
+import sys
+import getopt
+import os
+
+import shlex, subprocess
+from getpass import getpass
+
+import datetime
+import time
+
+help_message = '''
+List folders on the Tier 3 storage element.
+Author: Morten Dam Jørgensen, 2011.
+
+Flags: 
+
+    -l :    Print date modified, file size and filenames (default)
+    -x :    Print SFrame XML input lines
+    -f :    Print full path
+
+Examples:
+	t3ls /user/username
+	t3ls -f /user/
+
+'''
+
+from xml.parsers import expat
+
+
+class xml_process:
+    def __init__(self,the_data,fields=[],keep_prefix=0,keep_attr=0):
+        self.results=[]
+        self.cur_name=None
+        self.tmp=[]
+        self.the_data=the_data
+        self.p=expat.ParserCreate()
+        self.p.StartElementHandler=self.start
+        self.p.EndElementHandler=self.end
+        self.p.CharacterDataHandler=self.data
+        self.fields=fields
+        self.keep_prefix=keep_prefix
+        self.keep_attr=keep_attr
+    def clean(self,data):
+        tmp=''.join(data)
+        return ' '.join(tmp.split())
+    def start(self,name,attrs): 
+        if not self.cur_name: self.cur_name=name
+        tmp_name=self.cur_name
+        if not self.keep_prefix:
+            if self.cur_name[1]==':': tmp_name=self.cur_name[2:]
+        self.attrs=attrs
+        if name != self.cur_name:
+            if not self.attrs or not self.keep_attr:
+                if not self.fields or tmp_name.lower() in self.fields:
+                    self.results.append( {tmp_name:self.clean(self.tmp)})
+            else:
+                if not self.fields or tmp_name.lower() in self.fields:
+                 self.results.append( { tmp_name:{self.clean(self.tmp):attrs}})
+            self.tmp=[]
+            self.cur_name=name
+    def data(self,info):  self.tmp.append(info)
+    def end(self,name): pass
+    def parse(self):
+        if 'xml' not in self.the_data[0:50].lower(): return []
+        self.p.Parse(self.the_data,1)
+        results=self.results
+        if self.fields:
+            filter_cache={}
+            results=[{}]
+            
+            for i in self.fields: filter_cache[i]=None
+            for row in self.results:
+                k,v=row.items()[0]
+                #check if filter_cache is full
+                full=0
+                for i in filter_cache:
+                    if not filter_cache[i]:
+                        filter_cache[i]=1
+                        full=0;break
+                    full=1
+                if full:
+                    for i in self.fields: filter_cache[i]=None
+                    full=0
+                    results.append({})
+                if k not in results[-1]:
+                    results[-1][k]=v
+        return results
+
+
+class NBIWebDAV(object):
+    """Communication with the Tier 3 storage element via WebDAV"""
+    def __init__(self, pw=""):
+		super(NBIWebDAV, self).__init__()
+		self.homedir = os.path.expanduser('~')
+		try:
+		    pw_file = open("%s/.globus/t3password" % self.homedir, "r")
+		    self.pw = pw_file.read()
+		    pw_file.close()
+		except:
+		    self.pw = getpass("Enter GRID password: ")
+
+    def ls(self, path):
+        """List Structure"""
+        exe = 'curl -s --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem  --data "<xml>" --header "Depth: 1" --header "Content-Type: text/xml" --request PROPFIND %s' % (self.homedir, self.pw, self.homedir, path)
+        a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        text =  a.communicate()[0]
+
+        result=xml_process(text)
+        result2=[]
+
+        ou = dict()
+        size_buff_len = 0
+        for i in result.parse(): ## Loop over parsed data
+			if i.has_key('href'):
+				if ou.has_key("name"):
+					result2.append(ou)
+				ou = {"name" : None, "size" : None, "modified": None}
+				ou["name"] = i["href"].replace(path, "").replace("//", "/")
+			if i.has_key("getcontentlength"):
+				if not i[u'getcontentlength'] == "":
+					ou["size"] =  int(i[u'getcontentlength'])
+					size_buff_len = max(size_buff_len, len(str(int(i[u'getcontentlength'])/1000000)))
+        		    
+				else:
+					ou["size"] = 0
+					
+			if i.has_key('getlastmodified'):
+				ou["modified"] = i[u'getlastmodified']
+
+
+        for line in result2:
+            dm = datetime.datetime.fromtimestamp(time.mktime(time.strptime(line["modified"], "%a, %d %b %Y %H:%M:%S %Z")))
+            if "f" in self.flags: # Full path listing
+                print "%s%s" % (path, line["name"])
+            elif "x" in self.flags:
+                if len(line["name"]) > 1 and not line["name"][-1] == "/":
+                    print '<In FileName="%s%s" Lumi="1.0" />' % (path.replace(BASE_URL_STR, BASE_URL_XROOT), line["name"])
+            else:
+                print ("{0}  {1:>%d} MB  {2}" % (size_buff_len)).format(str(dm), line["size"]/1000000, line["name"])
+			
+		
+class Usage(Exception):
+	def __init__(self, msg):
+		self.msg = msg
+
+
+def main(argv=None):
+
+
+	if len(sys.argv) < 2 or "-h" in sys.argv:
+		print help_message
+		return
+		
+		
+	wd = NBIWebDAV()
+	dire = ""	
+	wd.flags = u""
+	for i in sys.argv[1:]:
+		if i[0] == "-":
+			wd.flags += i[1:]
+		if i[0] == "/":
+			dire = i
+		else:
+			dire = "/" + i
+		wd.ls(BASE_URL % dire.replace(BASE_URL_STR, ""))
+
+if __name__ == "__main__":
+	sys.exit(main())
