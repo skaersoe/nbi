@@ -53,7 +53,7 @@ class NBIWebDAV(object):
 	def get(self, filename, destination, overwrite=False):
 		"""Download file"""
 		
-		exe = 'curl -# --location-trusted --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -o %s' % (self.homedir, self.pw, self.homedir, filename, destination)
+		exe = 'curl --location-trusted --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -o %s' % (self.homedir, self.pw, self.homedir, filename, destination)
 
 		# return
 		
