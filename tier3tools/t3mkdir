@@ -43,7 +43,14 @@ class NBIWebDAV(object):
 		    self.pw = pw_file.read()
 		    pw_file.close()
 		except:
-		    self.pw = getpass("Enter GRID password: ")
+		    try:
+		        if open("%s/.globus/userkey.pem" % self.homedir, "r").read().find("ENCRYPTED") == -1:
+		            self.pw = ""
+		        else:
+		            self.pw = getpass("Enter GRID password: ")
+		            
+		    except:
+		        self.pw = getpass("Enter GRID password: ")
 
 
 		

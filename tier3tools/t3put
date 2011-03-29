@@ -39,11 +39,18 @@ class NBIWebDAV(object):
         super(NBIWebDAV, self).__init__()
         self.homedir = os.path.expanduser('~')
         try:
-            pw_file = open("%s/.globus/t3password" % self.homedir, "r")
-            self.pw = pw_file.read()
-            pw_file.close()
+		    pw_file = open("%s/.globus/t3password" % self.homedir, "r")
+		    self.pw = pw_file.read()
+		    pw_file.close()
         except:
-            self.pw = getpass("Enter GRID password: ")
+		    try:
+		        if open("%s/.globus/userkey.pem" % self.homedir, "r").read().find("ENCRYPTED") == -1:
+		            self.pw = ""
+		        else:
+		            self.pw = getpass("Enter GRID password: ")
+		            
+		    except:
+		        self.pw = getpass("Enter GRID password: ")
 
 
 		
@@ -69,16 +76,16 @@ class NBIWebDAV(object):
                 print self.delete(destination)
                 resp = 	 self.upload(filename, destination)
         elif resp.find("403") > -1 and not overwrite:
-            print "Dammit"
+            print "Failed, the file might already exist?"
 
         return resp
 
 		
-	def delete(self, path):
-		"""docstring for delete"""
-		exe = 'curl -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem --request DELETE %s' %(self.homedir, self.pw, self.homedir, path)
-		a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-		return a.communicate()[0]
+    def delete(self, path):
+        """docstring for delete"""
+        exe = 'curl -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem --request DELETE %s' %(self.homedir, self.pw, self.homedir, path)
+        a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        return a.communicate()[0]
 		
 
 class Usage(Exception):
@@ -109,7 +116,7 @@ def main(argv=None):
 			print wd.upload(filename, dest, overwrite=True)
 			
 	else:
-		print wd.upload(sys.argv[1], BASE_URL % dire.replace(BASE_URL_STR, ""))
+		print wd.upload(sys.argv[1], BASE_URL % dire.replace(BASE_URL_STR, ""), overwrite=True)
 		
 
 
