@@ -49,7 +49,7 @@ class NBIWebDAV(object):
 		
 	def mkdir(self, path):
 		"""docstring for mkdir"""
-		exe = 'curl -s --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem -X MKCOL %s' %(self.homedir, self.pw, self.homedir, path)
+		exe = 'curl -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem -X MKCOL %s' %(self.homedir, self.pw, self.homedir, path)
 		a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 		return a.communicate()[0]
 
