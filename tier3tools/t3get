@@ -35,36 +35,40 @@ Installation:
 '''
 
 class NBIWebDAV(object):
-	"""Communication with the Tier 3 storage element via WebDAV"""
-	def __init__(self, pw=""):
-		super(NBIWebDAV, self).__init__()
-		self.homedir = os.path.expanduser('~')
-		try:
-		    pw_file = open("%s/.globus/t3password" % self.homedir, "r")
-		    self.pw = pw_file.read()
-		    pw_file.close()
-		except:
-		    self.pw = getpass("Enter GRID password: ")
+    """Communication with the Tier 3 storage element via WebDAV"""
+    def __init__(self, pw=""):
+        super(NBIWebDAV, self).__init__()
+        self.homedir = os.path.expanduser('~')
+        try:
+            pw_file = open("%s/.globus/t3password" % self.homedir, "r")
+            self.pw = pw_file.read()
+            pw_file.close()
+        except:
+            self.pw = getpass("Enter GRID password: ")
 
 
 		
 
 
-	def get(self, filename, destination, overwrite=False):
-		"""Download file"""
-		
-		exe = 'curl --location-trusted --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -o %s' % (self.homedir, self.pw, self.homedir, filename, destination)
+    def get(self, filename, destination, overwrite=False):
+        """Download file"""
 
-		# return
-		
-		a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-		resp = a.communicate()[0]
-		
-		
-		return resp
-		
-	
-		
+        d = destination.split("/")
+        if d[-1] == ".":
+            d[-1] = filename.replace(BASE_URL_STR, "").split("/")[-1]
+        destination = "/".join(d)
+        exe = 'curl -k --location-trusted --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -o %s' % (self.homedir, self.pw, self.homedir, filename, destination)
+
+        # return
+
+        a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        resp = a.communicate()[0]
+
+
+        return resp
+
+
+
 
 class Usage(Exception):
 	def __init__(self, msg):
