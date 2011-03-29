@@ -53,10 +53,12 @@ class NBIWebDAV(object):
     def get(self, filename, destination, overwrite=False):
         """Download file"""
 
-        d = destination.split("/")
+        d = destination.split("/")  # In case of . as output, use the input file name (not very safe)
         if d[-1] == ".":
             d[-1] = filename.replace(BASE_URL_STR, "").split("/")[-1]
         destination = "/".join(d)
+        
+        
         exe = 'curl -k --location-trusted --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -o %s' % (self.homedir, self.pw, self.homedir, filename, destination)
 
         # return

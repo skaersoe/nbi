@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 
 #Set up the environment variables needed by xrootd
 function gridenv {
