@@ -100,7 +100,7 @@ def main(argv=None):
 		return
 		
 	wd = NBIWebDAV()
-	
+
 	dire = ""
 
 	if sys.argv[-1][0] == "/":
@@ -112,6 +112,7 @@ def main(argv=None):
 		files = sys.argv[1:-1]
 		for filename in files:
 			dest = BASE_URL % dire.replace(BASE_URL_STR, "") + filename
+
 			print "Transfering %s ..." % dest
 			print wd.upload(filename, dest, overwrite=True)
 			
