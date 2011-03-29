@@ -1,4 +1,44 @@
 
+These functions facilitate the use of nordugrid grid proxies on a MacOS X environment.
+It is assumed that you have already installed the mac-release of the nordugrid-arc-nox
+which can be found at http://download.nordugrid.org/software/nordugrid-arc-nox/releases/1.2.0/
+
 Usage:
-Source the script and then call "gridcheck" from your .bash_profile
-Enjoy :)
+Pit the following two lines somewhere in your ~/.bash_profile file:
+. $HOME/code/nbi/arc_setup_macsetup.sh
+gridcheck
+
+(If you have unpacked the repository to a different place, adjust the path accordingly)
+
+Functions:
+	gridenv:
+		Set up the variables X509_CERT_DIR and X509_USER_PROXY
+		which are needed on a mac in order to be able to use xrootd services, 
+		such as opening root-files with paths starting with root://
+		
+	gridproxy:
+		Make a new grid-proxy using the command "arcproxy". The maximum valididy
+		period of 12 hours will be used.
+		
+	gridcheck:
+		gridcheck will ckeck if you have a valid grid proxy. If you do, it will
+		call gridenv, and tell you for how much longer your proxy will be valid. 
+		If you need a longer validity period, renew your proxy with "gridproxy".
+		
+		If you do not have a valid proxy, and your userkey is encrypted, you will
+		be reminded to make one to be able to use grid-services.
+		
+		If your userkey is not password protected, gridcheck will make a new proxy
+		if needed.
+
+Notes:
+	If you want "gridcheck" to make a proxy automatically, you have to remove the 
+	encryption from your userkey. 
+	YOU SHOULD ONLY DO THIS IF YOU ARE AWARE OF THE SECURITY RISKS INVOLVED!!
+	This can be done with the command:
+	openssl rsa -in ~/.globus/userkey.pem -out ~/.globus/userkey.pem.new
+	userkey.pem.new has to be renamed to userkey.pem for this to work.
+	
+	In order to add a password again (or change the existing password) use:
+	openssl rsa -in ~/.globus/userkey.pem -des3 -out ~/.globus/userkey.pem.new
+	again userkey.pem.new has to be renamed to userkey.pem before the change takes effect.
