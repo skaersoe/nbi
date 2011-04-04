@@ -134,22 +134,33 @@ class NBIWebDAV(object):
         ou = dict()
         size_buff_len = 0
         for i in result.parse(): ## Loop over parsed data
-			if i.has_key('href'):
-				if ou.has_key("name"):
-					result2.append(ou)
-				ou = {"name" : None, "size" : None, "modified": None}
-				ou["name"] = i["href"].replace(path, "").replace("//", "/")
-			if i.has_key("getcontentlength"):
-				if not i[u'getcontentlength'] == "":
-					ou["size"] =  int(i[u'getcontentlength'])
-					size_buff_len = max(size_buff_len, len(str(int(i[u'getcontentlength'])/1000000)))
-        		    
-				else:
-					ou["size"] = 0
+            if i.has_key('status'):
+                ou = {"name" : None, "size" : None, "modified": None}
+                ou["status"] = i["status"]
+                
+            if i.has_key("getcontenttype"):
+                ou["contenttype"] = i["getcontenttype"]
+        
+            if i.has_key('getetag'):
+	            ou["etag"] = i["getetag"]
+	            result2.append(ou)
+                
+            if i.has_key('href'):
+                ou["name"] = i["href"].replace(path, "").replace("//", "/")    
+            if i.has_key("getcontentlength"):
+                if not i[u'getcontentlength'] == "":
+                    ou["size"] =  int(i[u'getcontentlength'])
+                    size_buff_len = max(size_buff_len, len(str(int(i[u'getcontentlength'])/1000000)))
+                else:
+                    ou["size"] = 0
 					
-			if i.has_key('getlastmodified'):
-				ou["modified"] = i[u'getlastmodified']
+            if i.has_key('getlastmodified'):
+			    ou["modified"] = i[u'getlastmodified']
 
+            if i.has_key('creationdate'):
+			    ou["creationdate"] = i[u'creationdate']
+			                
+            
 
         for line in result2:
             dm = datetime.datetime.fromtimestamp(time.mktime(time.strptime(line["modified"], "%a, %d %b %Y %H:%M:%S %Z")))
