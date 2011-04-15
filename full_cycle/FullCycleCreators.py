@@ -31,7 +31,11 @@
 
 
 def Is_stl_like(typename):
-    stl_like = "vector" in typename # May want to include other stl_containers here, but I don't expect others to be used.
+    
+    #stl_like = "vector" in typename
+    import re
+    stl_like = bool(re.search("""vector\s*<.*>""",typename))
+    # May want to include other stl_containers here, but I don't expect others to be used.
     # ... and really there is only so far you can go with automatic gode generation.
     if stl_like:
         return "*"
@@ -449,55 +453,47 @@ class CycleCreator:
     # @param className Name of the analysis cycle. Can contain the namespace name.
     # @param fileName  Optional parameter with the LinkDef file name
     # @param namespace  Optional parameter with the name of the namespace to use
-    def AddLinkDef( self, className, fileName = "LinkDef.h" , namespace=""):
+    def AddLinkDef( self, className, fileName = "LinkDef.h" , namespace="", varlist=[]):
         
         cycleName=className
         if namespace:
             cycleName=namespace+"::"+className
         
+        new_lines="#pragma link C++ class %s+;\n" %  cycleName
+        
+        types=set()
+        for var in varlist:
+            if Is_stl_like(var.typename):
+                types.add(var.typename)
+        
+        for typename in types:
+            new_lines+="#pragma link C++ class %s+;\n" % typename
+        
         import os.path
         if os.path.exists( fileName ):
             print "AddLinkDef:: Extending already existing file \"" + fileName + "\""
             # Read in the already existing file:
-            output = open( fileName, "r" )
-            lines = output.readlines()
-            output.close()
+            infile = open( fileName, "r" )
+            text=infile.read()
+            infile.close()
 
             # Find the "#endif" line:
-            endif_line = ""
             import re
-            for line in lines:
-                if re.search( "#endif", line ):
-                    endif_line = line
-            if endif_line == "":
+            if not re.search("""#endif""",text):
                 print "AddLinkDef:: ERROR File \"" + file + "\" is not in the right format!"
                 print "AddLinkDef:: ERROR Not adding link definitions!"
                 return
-            index = lines.index( endif_line )
-
-            # Add the line defining the current analysis cycle:
-            lines.insert( index, "#pragma link C++ class %s+;\n" %  cycleName)
-            lines.insert( index + 1, "\n" )
-
+            
             # Overwrite the file with the new contents:
             output = open( fileName, "w" )
-            for line in lines:
-                output.write( line )
+            output.write( re.sub("""(?=\n#endif)""",new_lines+"\n",text) )
             output.close()
 
         else:
             # Create a new file and fill it with all the necessary lines:
             print "AddLinkDef:: Creating new file called \"" + fileName + "\""
             output = open( fileName, "w" )
-            output.write( "// Dear emacs, this is -*- c++ -*-\n" )
-            output.write( "// $Id: CycleCreators.py 173 2010-05-12 15:49:33Z krasznaa $\n\n" )
-            output.write( "#ifdef __CINT__\n\n" )
-            output.write( "#pragma link off all globals;\n" )
-            output.write( "#pragma link off all classes;\n" )
-            output.write( "#pragma link off all functions;\n\n" )
-            output.write( "#pragma link C++ nestedclass;\n\n" )
-            output.write( "#pragma link C++ class %s+;\n\n" % cycleName )
-            output.write( "#endif // __CINT__\n" )
+            output.write( self._Template_LinkDef %{"new_lines":new_lines})
 
         return
     
@@ -731,7 +727,7 @@ class CycleCreator:
         
         # All options seem to be in order. Generate the code.
         self.CreateHeader( className, include_dir + className + ".h", namespace=namespace, varlist=cycle_variables, create_output=bool(outtree))
-        self.AddLinkDef( className, linkdef , namespace=namespace)
+        self.AddLinkDef( className, linkdef , namespace=namespace, varlist=cycle_variables)
         self.CreateSource( className, src_dir + className + ".cxx", namespace=namespace, varlist=cycle_variables, create_output=bool(outtree) )
         self.CreateConfig( className, fileName=config_dir + className + "_config.xml" , namespace=namespace, analysis=analysis, rootfile=rootfile,treename=treename,outtree=outtree)
         self.AddJobConfig(directory=config_dir)
@@ -899,4 +895,17 @@ void %(class)-s::ExecuteEvent( const SInputData&, Double_t ) throw( SError ) {
 ClassImp( %(fullClassName)s );
 
 %(body)s
+"""
+    _Template_LinkDef="""// Dear emacs, this is -*- c++ -*-
+// $Id: CycleCreators.py 173 2010-05-12 15:49:33Z krasznaa $
+
+#ifdef __CINT__
+
+#pragma link off all globals;
+#pragma link off all classes;
+#pragma link off all functions;
+#pragma link C++ nestedclass;
+
+%(new_lines)s
+#endif // __CINT__
 """
