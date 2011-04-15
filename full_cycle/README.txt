@@ -1,4 +1,4 @@
-Python script to create a full usable SFrame cycle.
+A python script to create a full usable SFrame cycle.
 
 FullCycleCreators.py should be linked or copied to $SFRAME_DIR/python/.
 sframe_create_full_cycle.py should be linked or copied to $SFRAME_DIR/bin/.
@@ -14,6 +14,38 @@ sframe_create_full_cycle.py:
 	It can then produce code that uses these variables in the sframe cycle.
 	If the name of an OUTTREE is given, code will be generated to copy all input
 	variables to an output tree.
+	
+The following describes some typical usecases:
+==============================================	
+	A full analysis can be created like this:
+	
+	$ sframe_new_package.py TestAnalysis
+	$ cd TestAnalysis
+	$ sframe_create_full_cycle.py -n MyNewCycle -r ntuple.root
+	
+	For this to work ntuple.root should contain a TTree. The name of the TTree as 
+	well as the list of variables will be read from ntuple.root. Code will be 
+	generated to read all the variables in ntuple.root. The config.xml file	will 
+	also be configured to read this file.
+	
+	If a different set of variables is desired, or no root-file can be supplied,
+	the script can be called like this:
+	
+	$ sframe_create_full_cycle.py -n MyNewCycle -v selection.C
+	
+	Where selection.C might contain variable declarations like this:
+	""""
+	//UInt_t RunNumber;
+	int el_n;
+	vector<float> el_pt;
+	vector<float> el_eta;\*
+	vector<float> el_phi;*/
+	""""
+	As can be seen, c-style comments can be used. Commented out variable 
+	declarations will be used in commented form. The tree-name and the root-file
+	name will be set to default values in the the config.xml file. These need to
+	be adjusted for running.
+	
 
 The usage of sframe_create_full_cycle.py is:
 $ sframe_create_full_cycle.py -h
