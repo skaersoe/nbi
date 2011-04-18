@@ -1,10 +1,9 @@
-# $Id: CycleCreators.py 173 2010-05-12 15:49:33Z krasznaa $
 ###########################################################################
 # @Project: SFrame - ROOT-based analysis framework for ATLAS              #
 #                                                                         #
-# @author Stefan Ask        <Stefan.Ask@cern.ch>            - Manchester    #
+# @author Stefan Ask        <Stefan.Ask@cern.ch>            - Manchester  #
 # @author David Berge      <David.Berge@cern.ch>          - CERN          #
-# @author Johannes Haller  <Johannes.Haller@cern.ch>      - Hamburg        #
+# @author Johannes Haller  <Johannes.Haller@cern.ch>      - Hamburg       #
 # @author A. Krasznahorkay <Attila.Krasznahorkay@cern.ch> - CERN/Debrecen #
 #                                                                         #
 ###########################################################################
@@ -399,7 +398,7 @@ class CycleCreator:
         srcpath = os.path.dirname( os.path.abspath( fileName ) ).split( os.sep )
         #find the indx from which the paths differ:
         index=0
-        while headpath[index]==srcpath[index]:
+        while index < min( len( headpath ), len( srcpath ) ) and headpath[index]==srcpath[index]:
             index+=1
         
         if index==0:
@@ -409,7 +408,7 @@ class CycleCreator:
             path = [ ".." for directory in srcpath[index:] ]
             # and up the path of the header
             path += headpath[index:]
-            include = os.sep.join( path ) + os.sep + os.path.basename( header )
+            include = os.path.join( os.sep.join( path ), os.path.basename( header ) )
         
         # Now create all the lines to handle the variables
         inputVariableConnections=""
@@ -829,7 +828,6 @@ private:
     # This string is used by CreateHeader to create a header file
     # once the body has already been generated
     _Template_header_Frame = """// Dear emacs, this is -*- c++ -*-
-// $Id: CycleCreators.py 173 2010-05-12 15:49:33Z krasznaa $
 #ifndef %(class)-s_H
 #define %(class)-s_H
 
@@ -908,8 +906,7 @@ void %(class)-s::ExecuteEvent( const SInputData&, Double_t ) throw( SError ) {
     #
     # This string is used by CreateSource to create a source file
     # once the main body has already been generated
-    _Template_source_Frame = """// $Id: CycleCreators.py 173 2010-05-12 15:49:33Z krasznaa $
-
+    _Template_source_Frame = """
 // Local include(s):
 #include \"%(header)s\"
 
@@ -918,7 +915,6 @@ ClassImp( %(fullClassName)s );
 %(body)s
 """
     _Template_LinkDef="""// Dear emacs, this is -*- c++ -*-
-// $Id: CycleCreators.py 173 2010-05-12 15:49:33Z krasznaa $
 
 #ifdef __CINT__
 
