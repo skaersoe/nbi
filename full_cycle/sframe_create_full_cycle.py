@@ -58,17 +58,17 @@ def main():
     parser.add_option( "--analysis", dest="analysis", action="store",
                         type="string", default="",
                         help="Name of the analysis package. Defaults to the name of the pwd." )
-    parser.add_option( "--outtree", dest="outtree", action="store",
+    parser.add_option( "-o", "--outtree", dest="outtree", action="store",
                         type="string", default="",
                         help="Name of the output tree, if it should be written." )
     
     ( options, args ) = parser.parse_args()
     
     # This is where the main function are:
-    from FullCycleCreators import CycleCreator
+    from FullCycleCreators import FullCycleCreator
     
     # Execute the cycle creation:
-    cc = CycleCreator()
+    cc = FullCycleCreator()
     cc.CreateCycle( **options.__dict__)
 
 

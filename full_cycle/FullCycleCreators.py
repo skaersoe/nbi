@@ -8,16 +8,16 @@
 #                                                                         #
 ###########################################################################
 
-## @package CycleCreators
+## @package FullCycleCreators
 #    @short Functions for creating a new analysis cycle torso
 #
-# This package collects the functions used by sframe_create_cycle.py
+# This package collects the functions used by sframe_create_full_cycle.py
 # to create the torso of a new analysis cycle. Apart from using
-# sframe_create_cycle.py, the functions can be used in an interactive
+# sframe_create_full_cycle.py, the functions can be used in an interactive
 # python session by executing:
 #
 # <code>
-#  >>> import CycleCreators
+#  >>> import FullCycleCreators
 # </code>
 
 ## @short Class creating analysis cycle templates
@@ -29,19 +29,7 @@
 # line for the new cycle.
 
 
-def Is_stl_like( typename ):
-    
-    #stl_like = "vector" in typename
-    import re
-    stl_like = bool( re.search( """<.+>""", typename ) ) or bool( "vector" in typename )
-    # May want to include other stl_containers here, but I don't expect others to be used.
-    # ... and really there is only so far you can go with automatic gode generation.
-    if stl_like:
-        return "*"
-    else:
-        return ""
-
-class CycleCreator:
+class FullCycleCreator:
     
     ## @short Function creating a configuration file for the new cycle
     #
@@ -70,7 +58,7 @@ class CycleCreator:
         """
         
         def __init__( self, name, typename, commented, stl_like ):
-            super( CycleCreator.Variable, self ).__init__( )
+            super( FullCycleCreator.Variable, self ).__init__( )
             self.name = name
             self.typename = typename
             self.stl_like = stl_like
@@ -122,7 +110,7 @@ class CycleCreator:
             varargs["commented"]=match.group( "comment" ) # whether the variable was commented out. Will be '//' if it was
             varargs["typename"] = match.group( "type" )
             varargs["name"] = match.group( "name" )
-            varargs["stl_like"] = Is_stl_like( match.group( "type" ) )
+            varargs["stl_like"] = self.Is_stl_like( match.group( "type" ) )
             varlist.append( self.Variable( **varargs ) )
         
         return varlist
@@ -238,13 +226,27 @@ class CycleCreator:
                     varargs["commented"]= ""
                     varargs["typename"] = leaf.GetTypeName( )
                     varargs["name"] = leaf.GetName( )
-                    varargs["stl_like"] = Is_stl_like( leaf.GetTypeName( ) )
+                    varargs["stl_like"] = self.Is_stl_like( leaf.GetTypeName( ) )
                     varlist.append( CycleCreator.Variable( **varargs ) )
             f.Close( )
             return varlist
         
         #End of Class ROOT_Access
     
+    
+    ## @short Determine whether the type named by typename needs to be accessed
+    # as an object or as a basic type.
+    def Is_stl_like( self, typename ):
+
+        #stl_like = "vector" in typename
+        import re
+        stl_like = bool( re.search( """<.+>""", typename ) ) or bool( "vector" in typename )
+        # May want to include other stl_containers here, but I don't expect others to be used.
+        # ... and really there is only so far you can go with automatic gode generation.
+        if stl_like:
+            return "*"
+        else:
+            return ""
     
     # See end of class definition for string literals
     
@@ -483,7 +485,7 @@ class CycleCreator:
         
         types=set( )
         for var in varlist:
-            if Is_stl_like( var.typename ):
+            if self.Is_stl_like( var.typename ):
                 types.add( var.typename )
         
         for typename in types:
