@@ -55,7 +55,7 @@ def main():
     parser.add_option( "-v", "--varlist", dest="varlist", action="store",
                         type="string", default="",
                         help="Name a file containing a list of variable declarations to be used in the cycle. Can contain comments." )
-    parser.add_option( "--analysis", dest="analysis", action="store",
+    parser.add_option( "-a", "--analysis", dest="analysis", action="store",
                         type="string", default="",
                         help="Name of the analysis package. Defaults to the name of the pwd." )
     parser.add_option( "-o", "--outtree", dest="outtree", action="store",

@@ -38,7 +38,7 @@ The following describes some typical usecases:
 	//UInt_t RunNumber;
 	int el_n;
 	vector<float> el_pt;
-	vector<float> el_eta;\*
+	vector<float> el_eta;/*
 	vector<float> el_phi;*/
 	""""
 	As can be seen, c-style comments can be used. Commented out variable 
@@ -69,6 +69,8 @@ Options:
   -v VARLIST, --varlist=VARLIST
                         Name a file containing a list of variable declarations
                         to be used in the cycle. Can contain comments.
-  --analysis=ANALYSIS   Name of the analysis package. Defaults to the name of
+  -a ANALYSIS, --analysis=ANALYSIS
+                        Name of the analysis package. Defaults to the name of
                         the pwd.
-  --outtree=OUTTREE     Name of the output tree, if it should be written.
+  -o OUTTREE, --outtree=OUTTREE
+                        Name of the output tree, if it should be written.
