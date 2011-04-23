@@ -45,9 +45,19 @@ The following describes some typical usecases:
 	declarations will be used in commented form. The tree-name and the root-file
 	name will be set to default values in the the config.xml file. These need to
 	be adjusted for running.
-	
 
-The usage of sframe_create_full_cycle.py is:
+Test Suite
+==========
+	If you would like to see a full test of sframe_create_full_cycle.py, have a
+	look at the test suite located in the folder "test/".
+	Inspect the script run_test.sh. It contains examples for how to use the most
+	important options that are available in sframe_create_full_cycle.py.
+	Run or source the script run_test.sh and inspect the generated code. The 
+	generated analysis itself is fairly trivial, but notice that it compiles and 
+	runs right out of the box!
+
+The usage of sframe_create_full_cycle.py
+========================================
 $ sframe_create_full_cycle.py -h
 >>
 >> sframe_create_full_cycle.py : Analysis cycle torso creator

@@ -226,8 +226,8 @@ class FullCycleCreator:
                     varargs["commented"]= ""
                     varargs["typename"] = leaf.GetTypeName( )
                     varargs["name"] = leaf.GetName( )
-                    varargs["stl_like"] = self.Is_stl_like( leaf.GetTypeName( ) )
-                    varlist.append( CycleCreator.Variable( **varargs ) )
+                    varargs["stl_like"] = FullCycleCreator.Is_stl_like( leaf.GetTypeName( ) )
+                    varlist.append( FullCycleCreator.Variable( **varargs ) )
             f.Close( )
             return varlist
         
@@ -236,7 +236,8 @@ class FullCycleCreator:
     
     ## @short Determine whether the type named by typename needs to be accessed
     # as an object or as a basic type.
-    def Is_stl_like( self, typename ):
+    @staticmethod
+    def Is_stl_like( typename ):
 
         #stl_like = "vector" in typename
         import re
