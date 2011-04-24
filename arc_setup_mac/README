@@ -4,7 +4,7 @@ It is assumed that you have already installed the mac-release of the nordugrid-a
 which can be found at http://download.nordugrid.org/software/nordugrid-arc-nox/releases/1.2.0/
 
 Usage:
-Pit the following two lines somewhere in your ~/.bash_profile file:
+Put the following two lines somewhere in your ~/.bash_profile file:
 . $HOME/code/nbi/arc_setup_macsetup.sh
 gridcheck
 
