@@ -4,7 +4,7 @@
 #Set up the environment variables needed by xrootd
 function gridenv {
 	export X509_CERT_DIR=/opt/local/nordugrid/etc/grid-security/certificates/
-	export X509_USER_PROXY=$(arcproxy -I|grep ^Proxy | head -1 |sed 's/Proxy .*: //')
+	export X509_USER_PROXY=$(arcproxy -I 2>/dev/null|grep ^Proxy | head -1 |sed 's/Proxy .*: //')
 }
 
 #make a new gridproxy.
