@@ -10,7 +10,7 @@ sframe_create_full_cycle.py:
 	same as that created by sframe_create_cycle.py, except that it compiles
 	and runs.
 	The power of this extended script is that it can read a list of variables
-	either directly from a root-file, or from a textile with variable declarations.
+	either directly from a root-file, or from a text file with variable declarations.
 	It can then produce code that uses these variables in the sframe cycle.
 	If the name of an OUTTREE is given, code will be generated to copy all input
 	variables to an output tree.
@@ -26,7 +26,8 @@ The following describes some typical usecases:
 	For this to work ntuple.root should contain a TTree. The name of the TTree as 
 	well as the list of variables will be read from ntuple.root. Code will be 
 	generated to read all the variables in ntuple.root. The config.xml file	will 
-	also be configured to read this file.
+	also be configured to read this file. If a different TTree than the first one
+	should be used, specify with --treename.
 	
 	If a different set of variables is desired, or no root-file can be supplied,
 	the script can be called like this:
