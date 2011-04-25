@@ -10,11 +10,15 @@
         ease communication with storage elements on the
         nordugrid.
 
-		
-	- arc_setup_mac
-	
-		A set of setup scripts that will set the necessary
-		environment variables that are needed so xrootd can
-		use your arc-proxy.
-		Assumes that the nordugrid-arc-nox client is installed:
-		http://download.nordugrid.org/software/nordugrid-arc-nox/releases/1.2.0/
+        
+    - arc_setup_mac
+    
+        A set of setup scripts that will set the necessary
+        environment variables that are needed so xrootd can
+        use your arc-proxy.
+        Assumes that the nordugrid-arc-nox client is installed:
+        http://download.nordugrid.org/software/nordugrid-arc-nox/releases/1.2.0/
+        
+    - full_cycle
+    
+        A script to produce a full SFrame analysis cycle
