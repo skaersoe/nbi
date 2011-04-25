@@ -28,6 +28,7 @@
 # created files and extend an already existing LinkDef.h file with the
 # line for the new cycle.
 
+import re
 
 class FullCycleCreator:
     
@@ -58,7 +59,7 @@ class FullCycleCreator:
         """
         
         def __init__( self, name, typename, commented, stl_like ):
-            super( FullCycleCreator.Variable, self ).__init__( )
+            super( FullCycleCreator.Variable, self ).__init__()
             self.name = name
             self.typename = typename
             self.stl_like = stl_like
@@ -86,31 +87,30 @@ class FullCycleCreator:
         From there they can be used to create the declarations and 
         connect-statements necessary to use the variables in a cycle.
         """
-        varlist=[]
+        varlist = []
         try:
-            text = open( filename ).read( )
+            text = open( filename ).read()
         except:
             print "Unable to open variable selection file", "\"%s\"" % filename
             return varlist
         
-        import re
         # Use some regexp magic to change all /*...*/ style comments to // style comments
-        text=re.sub( """\*/( ?!\n)""", "*/\n", text ) # append    newline to every */
+        text = re.sub( """\*/( ?!\n)""", "*/\n", text ) # append    newline to every */
         while re.search( """/\*""", text ):  # While ther still are /* comments
-            text=re.sub( """/\*(?P<line>.*?)(?P<end>\n|\*/)""", """//\g<line>/*\g<end>""", text ) # move the /* to the next newline or to the end of the comment
-            text=re.sub( """/\*\*/""", "", text )  # remove zero content comments
-            text=re.sub( """/\*\n""", "\n/*", text ) # move the /* past the newline
+            text = re.sub( """/\*(?P<line>.*?)(?P<end>\n|\*/)""", """//\g<line>/*\g<end>""", text ) # move the /* to the next newline or to the end of the comment
+            text = re.sub( """/\*\*/""", "", text )  # remove zero content comments
+            text = re.sub( """/\*\n""", "\n/*", text ) # move the /* past the newline
         
         # Find every variable definition.
         # Definitions may start with a //.
         # After that I expect there to be a typename of the form UInt_t or int or std::vector<double>, 
         # and finally maybe a ; and some spaces.
         for match in re.finditer( """[ \t]*(?P<comment>(?://)?)[ \t]*(?P<type>[a-zA-Z_][a-zA-Z_0-9:]*(?:[ \t]*<.+>)?)[ \t]*(?P<point>\*?)[ \t]*(?P<name>[a-zA-Z_][a-zA-Z_0-9]*)[ \t;]*""", text ):
-            varargs={}
-            varargs["commented"]=match.group( "comment" ) # whether the variable was commented out. Will be '//' if it was
-            varargs["typename"] = match.group( "type" )
-            varargs["name"] = match.group( "name" )
-            varargs["stl_like"] = self.Is_stl_like( match.group( "type" ) )
+            varargs = {}
+            varargs[ "commented" ] = match.group( "comment" ) # whether the variable was commented out. Will be '//' if it was
+            varargs[ "typename" ] = match.group( "type" )
+            varargs[ "name" ] = match.group( "name" )
+            varargs[ "stl_like" ] = self.Is_stl_like( match.group( "type" ) )
             varlist.append( self.Variable( **varargs ) )
         
         return varlist
@@ -137,7 +137,7 @@ class FullCycleCreator:
         empty objects if ROOT was't imported properly.
         """
         def __init__( self ):
-            self.intitalized=0
+            self.intitalized = 0
         
         
         def Initalize( self ):
@@ -146,26 +146,27 @@ class FullCycleCreator:
             
             try:
                 import ROOT
-                self.ROOT=ROOT
+                self.ROOT = ROOT
             except ImportError, e:
                 print "ERROR: pyROOT could not be loaded. Unable to access root-file"
                 print "ERROR: You will need to supply the treename and variable list."
                 print "ERROR: use -h or --help to get help."
-                self.ROOT=0
+                self.ROOT = 0
             
             return bool( self.ROOT )
         
         
         def TCollIter( self, tcoll ):
             """Gives an iterator over anything that the ROOT.TIter can iterate over."""
-            if not self.Initalize( ):
+            if not self.Initalize():
                 return
-            it=self.ROOT.TIter( tcoll )
-            it.Reset( )
-            item=it.Next( )
+            it = self.ROOT.TIter( tcoll )
+            it.Reset()
+            item = it.Next()
             while item:
                 yield item
-                item=it.Next( )
+                item = it.Next()
+            return
         
         
         def GetTreeName( self, rootfile ):
@@ -173,23 +174,23 @@ class FullCycleCreator:
             Get the name of the first treename in the file named rootfile.
             Or just return 'TreeName' if any errors show up.
             """
-            treename= "TreeName"
-            if not self.Initalize( ):
+            treename = "TreeName"
+            if not self.Initalize():
                 return treename
             
             if not rootfile:
                 print "No rootfile given. Using default tree name:", treename
                 return treename
             
-            f=self.ROOT.TFile.Open( rootfile )
+            f = self.ROOT.TFile.Open( rootfile )
             if not f:
                 print rootfile, "could not be opened. Using default tree name:", treename
                 return treename
-            trees=[key for key in self.TCollIter( f.GetListOfKeys( ) ) if key.GetClassName( )=="TTree"]
+            trees = [ key for key in self.TCollIter( f.GetListOfKeys() ) if key.GetClassName() == "TTree" ]
             if len( trees ):
-                treename=trees[0].GetName( )
+                treename = trees[ 0 ].GetName()
                 print "Found TTree", "\"%s\"" % treename
-            f.Close( )
+            f.Close()
             
             return treename
         
@@ -200,35 +201,35 @@ class FullCycleCreator:
             format. From there they can be used to create the declarations and connect
             statements necessary to use the variables in a cycle.
             """
-            varlist=[]
-            if not self.Initalize( ):
+            varlist = []
+            if not self.Initalize():
                 return varlist
-            ROOT=self.ROOT
+            ROOT = self.ROOT
             
             if not rootfile or not treename:
                 print "Incomplete arguments. Cannot get tree named \"%s\" from rootfile \"%s\"" % ( treename, rootfile )
                 return varlist
             
-            f=ROOT.TFile.Open( rootfile )
+            f = ROOT.TFile.Open( rootfile )
             if not f:
                 print "Could not open root file \"%s\"" % rootfile
                 return varlist
             
-            tree=f.Get( treename )
+            tree = f.Get( treename )
             if not tree:
                 print "Could not get tree \"%s\"" % treename
-                f.Close( )
+                f.Close()
                 return varlist
             
-            for branch in self.TCollIter( tree.GetListOfBranches( ) ):
-                for leaf in self.TCollIter( branch.GetListOfLeaves( ) ):
-                    varargs={}
-                    varargs["commented"]= ""
-                    varargs["typename"] = leaf.GetTypeName( )
-                    varargs["name"] = leaf.GetName( )
-                    varargs["stl_like"] = FullCycleCreator.Is_stl_like( leaf.GetTypeName( ) )
+            for branch in self.TCollIter( tree.GetListOfBranches() ):
+                for leaf in self.TCollIter( branch.GetListOfLeaves() ):
+                    varargs = {}
+                    varargs[ "commented" ] = ""
+                    varargs[ "typename" ] = leaf.GetTypeName()
+                    varargs[ "name" ] = leaf.GetName()
+                    varargs[ "stl_like" ] = FullCycleCreator.Is_stl_like( leaf.GetTypeName() )
                     varlist.append( FullCycleCreator.Variable( **varargs ) )
-            f.Close( )
+            f.Close()
             return varlist
         
         #End of Class ROOT_Access
@@ -240,7 +241,6 @@ class FullCycleCreator:
     def Is_stl_like( typename ):
 
         #stl_like = "vector" in typename
-        import re
         stl_like = bool( re.search( """<.+>""", typename ) ) or bool( "vector" in typename )
         # May want to include other stl_containers here, but I don't expect others to be used.
         # ... and really there is only so far you can go with automatic gode generation.
@@ -249,12 +249,16 @@ class FullCycleCreator:
         else:
             return ""
     
+    ## @short Indent a text body for inserting into a namespace
+    def Indent( self, text ):
+        return re.sub( """(?<=:^|\n)(?=.)""", """%s\g<0>""" % self._tab, text )
+    
     # See end of class definition for string literals
     
     def __init__( self ):
         self._headerFile = ""
         self._sourceFile = ""
-        self.pyROOT=self.ROOT_Access( )
+        self.pyROOT = self.ROOT_Access()
     
     ## @short Function creating a configuration file for the new cycle
     #
@@ -275,9 +279,8 @@ class FullCycleCreator:
         splits the cycleName into a class name and a namespace name
         returns a tuple of (namespace, className )
         """
-        namespace=""
-        className=cycleName
-        import re
+        namespace = ""
+        className = cycleName
         if re.search( "::", cycleName ):
             m = re.match( "(.*)::(.*)", cycleName )
             namespace = m.group( 1 )
@@ -321,53 +324,53 @@ class FullCycleCreator:
     # @param namespace  Optional parameter with the name of the namespace to use
     # @param varlist  Optional parameter with a list of "Variable" objects for which to create declarations
     # @param create_output  Optional parameter for whether to create declarations for output variables
-    def CreateHeader( self, className, fileName = "" , namespace="", varlist=[], create_output=False ):
+    def CreateHeader( self, className, headerName = "" , namespace = "", varlist = [], create_output = False, **kwargs):
         # Construct the file name if it has not been specified:
-        if  not fileName:
-            fileName = className + ".h"
+        if  not headerName:
+            headerName = className + ".h"
         
-        fullClassName=className
+        fullClassName = className
         if namespace:
-            fullClassName=namespace+"::"+className
-        formdict={"tab":self._tab, "class":className, "namespace":namespace, "fullClassName":fullClassName}
+            fullClassName = namespace + "::" + className
+        formdict = { "tab":self._tab, "class":className, "namespace":namespace, "fullClassName":fullClassName }
 
         # Now create all the lines to declare the input and output variables
-        inputVariableDeclarations=""
-        outputVariableDeclarations=""
+        inputVariableDeclarations = ""
+        outputVariableDeclarations = ""
 
         for var in varlist:
-            subs_dict=dict( formdict )
+            subs_dict = dict( formdict )
             subs_dict.update( var.__dict__ )
             inputVariableDeclarations += "%(tab)s%(commented)s%(typename)s\t%(stl_like)s%(name)s;\n" % subs_dict
 
             if create_output:
                 outputVariableDeclarations += "%(tab)s%(commented)s%(typename)s\tout_%(name)s;\n" % subs_dict
         
-        formdict["inputVariableDeclarations"]=inputVariableDeclarations
-        formdict["outputVariableDeclarations"]=outputVariableDeclarations
+        formdict[ "inputVariableDeclarations" ] = inputVariableDeclarations
+        formdict[ "outputVariableDeclarations" ] = outputVariableDeclarations
         # Some printouts:
         print "CreateHeader:: Cycle name     = " + className
-        print "CreateHeader:: File name      = " + fileName
-        self._headerFile = fileName
+        print "CreateHeader:: File name      = " + headerName
+        self._headerFile = headerName
 
         # Create a backup of an already existing header file:
-        self.Backup( fileName )
+        self.Backup( headerName )
         
         # Construct the contents:
-        body=self._Template_header_Body % formdict
+        body = self._Template_header_Body % formdict
         if namespace:
-            ns_body=self._Template_namespace % {"namespace":namespace, "body":re.sub( """(?:^|\n)(?=.)""", """\g<0>%s"""%self._tab, body )}
+            ns_body = self._Template_namespace % { "namespace":namespace, "body": self.Indent( body ) }
         else:
-            ns_body=body
-        import re
-        full_contents=self._Template_header_Frame % {"body":ns_body, "class":( namespace+"_"+className ).upper( ), "fullClassName":namespace+"::"+className}
+            ns_body = body
+        
+        full_contents = self._Template_header_Frame % {"body":ns_body, "class":( namespace+"_"+className ).upper(), "fullClassName":namespace+"::"+className}
 
         # Write the header file:
-        output = open( fileName, "w" )
+        output = open( headerName, "w" )
         output.write( full_contents )
-        output.close( )
+        output.close()
         
-        return fileName
+        return headerName
     
     
     ## @short Function creating the analysis cycle source file
@@ -382,45 +385,48 @@ class FullCycleCreator:
     # @param namespace  Optional parameter with the name of the namespace to use
     # @param varlist  Optional parameter with a list of "Variable" objects to be used by the cycle
     # @param create_output  Optional parameter for whether to produce code for output variables
-    def CreateSource( self, className, fileName = "", namespace="", varlist=[], create_output=False, header="" ):
+    def CreateSource( self, className, sourceName = "", namespace = "", varlist = [], create_output = False, header = "", **kwargs ):
         # Construct the file name if it has not been specified:
-        if fileName == "":
-            fileName = className + ".cxx"
+        if sourceName == "":
+            sourceName = className + ".cxx"
         
         if not header:
-            header= className + ".h"
+            header = className + ".h"
         
-        fullClassName=className
+        fullClassName = className
         if namespace:
-            fullClassName=namespace+"::"+className
-        formdict={"tab":self._tab, "class":className, "namespace":namespace, "fullClassName":fullClassName}
+            fullClassName = namespace + "::" + className
+        formdict = { "tab":self._tab, "class":className, "namespace":namespace, "fullClassName":fullClassName }
         
         # Determine the relative path of the header
         import os
         headpath = os.path.dirname( os.path.abspath( header ) ).split( os.sep )
-        srcpath = os.path.dirname( os.path.abspath( fileName ) ).split( os.sep )
-        #find the indx from which the paths differ:
-        index=0
-        while index < min( len( headpath ), len( srcpath ) ) and headpath[index]==srcpath[index]:
-            index+=1
+        srcpath = os.path.dirname( os.path.abspath( sourceName ) ).split( os.sep )
+        #find the index from which the paths differ:
+        index = 0
+        while index < min( len( headpath ), len( srcpath ) ) and headpath[index] == srcpath[index]:
+            # find the highest index to which the paths are equal
+            index += 1
         
-        if index==0:
-            include=os.path.abspath( header )
+        if index == 0:
+            # no common path
+            include = os.path.abspath( header )
         else:
             # Step down the path of the Source-file
             path = [ ".." for directory in srcpath[index:] ]
             # and up the path of the header
             path += headpath[index:]
-            include = os.path.join( os.sep.join( path ), os.path.basename( header ) )
+            path.append( os.path.basename( header ) )
+            include = os.sep.join( path )
         
         # Now create all the lines to handle the variables
-        inputVariableConnections=""
-        outputVariableConnections=""
-        outputVariableClearing=""
-        outputVariableFilling=""
+        inputVariableConnections = ""
+        outputVariableConnections = ""
+        outputVariableClearing = ""
+        outputVariableFilling = ""
 
         for var in varlist:
-            subs_dict=dict( formdict )
+            subs_dict =dict( formdict )
             subs_dict.update( var.__dict__ )
 
             inputVariableConnections += "%(tab)s%(commented)sConnectVariable( InTreeName.c_str(), \"%(name)s\", %(name)s );\n" % subs_dict
@@ -431,34 +437,33 @@ class FullCycleCreator:
                 if var.stl_like:
                     outputVariableClearing += "%(tab)s%(commented)sout_%(name)s.clear();\n" % subs_dict
         
-        formdict["inputVariableConnections"]=inputVariableConnections
-        formdict["outputVariableConnections"]=outputVariableConnections
-        formdict["outputVariableClearing"]=outputVariableClearing
-        formdict["outputVariableFilling"]=outputVariableFilling
+        formdict[ "inputVariableConnections" ] = inputVariableConnections
+        formdict[ "outputVariableConnections" ] = outputVariableConnections
+        formdict[ "outputVariableClearing" ] = outputVariableClearing
+        formdict[ "outputVariableFilling" ] = outputVariableFilling
         
         # Some printouts:
-        print "CreateSource:: Cycle name     = " + className
-        print "CreateSource:: File name      = " + fileName
-        self._sourceFile = fileName
+        print "CreateSource:: Cycle name     =", className
+        print "CreateSource:: File name      =", sourceName
+        self._sourceFile = sourceName
 
         
         # Create a backup of an already existing source file:
-        self.Backup( fileName )
+        self.Backup( sourceName )
         
         #Construct the contents of the source file:
-        body=self._Template_source_Body % formdict
+        body = self._Template_source_Body % formdict
         if namespace:
-            import re
-            ns_body=self._Template_namespace % {"namespace":namespace, "body":re.sub( """(?:^|\n)(?=.)""", """\g<0>%s"""%self._tab, body )}
+            ns_body = self._Template_namespace % { "namespace":namespace, "body":self.Indent( body ) }
         else:
-            ns_body=body
-        full_contents=self._Template_source_Frame % {"body":ns_body, "fullClassName":fullClassName, "header":include}
+            ns_body = body
+        full_contents = self._Template_source_Frame % { "body":ns_body, "fullClassName":fullClassName, "header":include }
         
         
         # Write the source file:
-        output = open( fileName, "w" )
+        output = open( sourceName, "w" )
         output.write( full_contents )
-        output.close( )
+        output.close()
         return
     
     
@@ -474,49 +479,52 @@ class FullCycleCreator:
     # cycle into this file.
     #
     # @param className Name of the analysis cycle. Can contain the namespace name.
-    # @param fileName  Optional parameter with the LinkDef file name
+    # @param linkdefName  Optional parameter with the LinkDef file name
     # @param namespace  Optional parameter with the name of the namespace to use
-    def AddLinkDef( self, className, fileName = "LinkDef.h" , namespace="", varlist=[] ):
+    def AddLinkDef( self, className, linkdefName = "LinkDef.h" , namespace = "", varlist = [], **kwargs):
         
-        cycleName=className
+        cycleName = className
         if namespace:
-            cycleName=namespace+"::"+className
+            cycleName = namespace + "::" + className
         
-        new_lines="#pragma link C++ class %s+;\n" %  cycleName
+        new_lines = "#pragma link C++ class %s+;\n" %  cycleName
         
-        types=set( )
+        # Find all object-like variable types and make pragma lines for them
+        # This is unnecessary for many simple vectors, but since it doesn't
+        # do any harm, We might as well include it for all object types
+        types = set()
         for var in varlist:
-            if self.Is_stl_like( var.typename ):
+            if var.stl_like:
                 types.add( var.typename )
         
         for typename in types:
-            new_lines+="#pragma link C++ class %s+;\n" % typename
+            new_lines += "#pragma link C++ class %s+;\n" % typename
         
         import os.path
-        if os.path.exists( fileName ):
-            print "AddLinkDef:: Extending already existing file \"%s\"" % fileName
+        if os.path.exists( linkdefName ):
+            print "AddLinkDef:: Extending already existing file \"%s\"" % linkdefName
             # Read in the already existing file:
-            infile = open( fileName, "r" )
-            text=infile.read( )
-            infile.close( )
+            infile = open( linkdefName, "r" )
+            text =infile.read()
+            infile.close()
 
             # Find the "#endif" line:
-            import re
             if not re.search( """#endif""", text ):
-                print "AddLinkDef:: ERROR File \"%s\" is not in the right format!" % fileName
+                print "AddLinkDef:: ERROR File \"%s\" is not in the right format!" % linkdefName
                 print "AddLinkDef:: ERROR Not adding link definitions!"
                 return
             
             # Overwrite the file with the new contents:
-            output = open( fileName, "w" )
+            output = open( linkdefName, "w" )
+            #Insert the newlines before the #endif
             output.write( re.sub( """(?=\n#endif)""", new_lines+"\n", text ) )
-            output.close( )
+            output.close()
 
         else:
             # Create a new file and fill it with all the necessary lines:
-            print "AddLinkDef:: Creating new file called \"%s\"" % fileName
-            output = open( fileName, "w" )
-            output.write( self._Template_LinkDef %{"new_lines":new_lines} )
+            print "AddLinkDef:: Creating new file called \"%s\"" % linkdefName
+            output = open( linkdefName, "w" )
+            output.write( self._Template_LinkDef %{ "new_lines":new_lines } )
 
         return
     
@@ -531,109 +539,135 @@ class FullCycleCreator:
     # 
     #
     # @param className Name of the analysis cycle
-    # @param fileName  Optional parameter with the output source file name
+    # @param configName  Optional parameter with the output config file name
     # @param namespace  Optional parameter with the name of the namespace to use
     # @param analysis  Optional parameter with the name of the analysis package
     # @param rootfile  Optional parameter with the name of an input root-file
     # @param treename  Optional parameter with the name of the input tree
     # @param outtree  Optional parameter with the name of the output tree if desired
-    def CreateConfig( self, className, fileName = "" , namespace="ns", analysis="MyAnalysis", rootfile="my/root/file.root", treename="InTreeName", outtree="" ):
+    def CreateConfig( self, className, configName = "" , namespace = "", analysis = "MyAnalysis", rootfile = "my/root/file.root", treename = "InTreeName", outtree = "", **kwargs):
         # Construct the file name if it has not been specified:
-        if fileName == "":
-            fileName = className + "_config.xml"
-        self.Backup( fileName )
+        if configName == "":
+            configName = className + "_config.xml"
+        self.Backup( configName )
         
-        cycleName=className
+        cycleName = className
         if namespace:
-            cycleName=namespace+"::"+cycleName
+            cycleName =namespace + "::" + cycleName
         
         # Some printouts:
-        print "CreateConfig:: Cycle name     = " + className
-        print "CreateConfig:: File name      = " + fileName
+        print "CreateConfig:: Cycle name     =", className
+        print "CreateConfig:: File name      =", configName
 
         # Use the configuration file FirstCycle_config.xml as a basis:
         import os
-        xmlinfile=os.path.join( os.getenv( "SFRAME_DIR" ), "user/config/FirstCycle_config.xml" )
+        xmlinfile = os.path.join( os.getenv( "SFRAME_DIR" ), "user/config/FirstCycle_config.xml" )
         if not os.path.exists( xmlinfile ):
             print "ERROR: Expected to find example configuration at", xmlinfile
             print "ERROR: No configuration file will be written."
             return
-
-        import xml.dom.minidom
-        example_xml=open( xmlinfile )
-        dom=xml.dom.minidom.parse( example_xml )
-        example_xml.close( )
         
-        #Make the necessary changes to adapt this file to our purposes
+        #Make changes to adapt this file to our purposes
         try:
-            nodes=dom.getElementsByTagName( "JobConfiguration" )
-            if not len( nodes )==1: raise AssertionError
-            nodes[0].setAttribute( "JobName", className+"Job" )
-            nodes[0].setAttribute( "OutputLevel", "INFO" )
-
+            import xml.dom.minidom
+            dom = xml.dom.minidom.parse( open( xmlinfile ) )
+            
+            nodes = dom.getElementsByTagName( "JobConfiguration" )
+            # If more than one Job configuration exists, crash
+            if not len( nodes ) == 1: raise AssertionError
+            JobConfiguration = nodes[ 0 ]
+            JobConfiguration.setAttribute( "JobName", className + "Job" )
+            JobConfiguration.setAttribute( "OutputLevel", "INFO" )
+            
+            #Find the libSFrameUser library and change it to ours
             for node in dom.getElementsByTagName( "Library" ):
-                if node.getAttribute( "Name" )=="libSFrameUser":
-                    node.setAttribute( "Name", "lib"+analysis )
-
+                if node.getAttribute( "Name" ) == "libSFrameUser":
+                    node.setAttribute( "Name", "lib" + analysis )
+            
+            #Find the SFrameUser package and change it to ours
             for node in dom.getElementsByTagName( "Package" ):
-                if node.getAttribute( "Name" )=="SFrameUser.par":
-                    node.setAttribute( "Name", analysis+".par" )
+                if node.getAttribute( "Name" ) == "SFrameUser.par":
+                    node.setAttribute( "Name", analysis + ".par" )
 
-            nodes=dom.getElementsByTagName( "Cycle" )
-            if not len( nodes )==1: raise AssertionError
-            cycle=nodes[0]
+            nodes = dom.getElementsByTagName( "Cycle" )
+            #There should be exactly one cycle
+            if not len( nodes ) == 1: raise AssertionError
+            cycle = nodes[ 0 ]
             cycle.setAttribute( "Name", cycleName )
             cycle.setAttribute( "RunMode", "LOCAL" )
-
-            nodes=cycle.getElementsByTagName( "InputData" )
-            while len( dom.getElementsByTagName( "InputData" ) )>1:
-                cycle.removeChild( dom.getElementsByTagName( "InputData" )[0] )
-
-            inputData=dom.getElementsByTagName( "InputData" )[0]
+            
+            #Remove all but one input data
+            while len( dom.getElementsByTagName( "InputData" ) ) > 1:
+                cycle.removeChild( dom.getElementsByTagName( "InputData" )[ -1 ] )
+            inputData = dom.getElementsByTagName( "InputData" )[ 0 ]
+            
+            for i in range( inputData.attributes.length ):
+                inputData.removeAttribute( inputData.attributes.item( 0 ).name )
+            
             inputData.setAttribute( "Lumi", "1.0" )
             inputData.setAttribute( "Version", "V1" )
             inputData.setAttribute( "Type", "DATA" )
-
-            while len( inputData.getElementsByTagName( "In" ) )>1:
-                inputData.removeChild( inputData.getElementsByTagName( "In" )[0] )
-            In=inputData.getElementsByTagName( "In" )[0]
+            # inputData.setAttribute( "Cacheable", "False" )
+            # inputData.setAttribute( "NEventsMax", "-1" )
+            # inputData.setAttribute( "NEventsSkip", "0" )
+            
+            # Remove all but one input files
+            while len( inputData.getElementsByTagName( "In" ) ) > 1:
+                inputData.removeChild( inputData.getElementsByTagName( "In" )[ -1 ] )
+            In = inputData.getElementsByTagName( "In" )[ 0 ]
+            
             In.setAttribute( "Lumi", "1.0" )
             In.setAttribute( "FileName", rootfile )
-
-            while len( inputData.getElementsByTagName( "InputTree" ) )>1:
-                inputData.removeChild( inputData.getElementsByTagName( "InputTree" )[0] )
-            inputData.getElementsByTagName( "InputTree" )[0].setAttribute( "Name", treename )
-
+            
+            # Remove all but one input trees
+            while len( inputData.getElementsByTagName( "InputTree" ) ) > 1:
+                inputData.removeChild( inputData.getElementsByTagName( "InputTree" )[ -1 ] )
+            InputTree = inputData.getElementsByTagName( "InputTree" )[ 0 ]
+            
+            InputTree.setAttribute( "Name", treename )
+            
+            # Remove the MetadataOutputTrees
             while len( inputData.getElementsByTagName( "MetadataOutputTree" ) ):
-                inputData.removeChild( inputData.getElementsByTagName( "MetadataOutputTree" )[0] )
-
+                inputData.removeChild( inputData.getElementsByTagName( "MetadataOutputTree" )[ 0 ] )
+            
+            # Remove all but one output Trees
             while len( inputData.getElementsByTagName( "OutputTree" ) )>1:
-                inputData.removeChild( inputData.getElementsByTagName( "OutputTree" )[0] )
-            outtreenode=inputData.getElementsByTagName( "OutputTree" )[0]
+                inputData.removeChild( inputData.getElementsByTagName( "OutputTree" )[ -1 ] )
+            outtreenode = inputData.getElementsByTagName( "OutputTree" )[ 0 ]
+            
             if not outtree:
+                # No output is desired, remove this node
                 inputData.removeChild( outtreenode )
             else:
                 outtreenode.setAttribute( "Name", outtree )
-
-            nodes=cycle.getElementsByTagName( "UserConfig" )
-            if not len( nodes )==1: raise AssertionError
-            UserConfig=nodes[0]
-
-            while len( UserConfig.getElementsByTagName( "Item" ) )>1:
-                UserConfig.removeChild( UserConfig.getElementsByTagName( "Item" )[0] )
-            Item=UserConfig.getElementsByTagName( "Item" )[0]
+            
+            nodes = cycle.getElementsByTagName( "UserConfig" )
+            # We expect one UserConfig section
+            if not len( nodes ) == 1: raise AssertionError
+            UserConfig = nodes[ 0 ]
+            
+            # Remove all but one item
+            while len( UserConfig.getElementsByTagName( "Item" ) ) > 1:
+                UserConfig.removeChild( UserConfig.getElementsByTagName( "Item" )[ -1 ] )
+            Item = UserConfig.getElementsByTagName( "Item" )[ 0 ]
+            
             Item.setAttribute( "Name", "InTreeName" )
             Item.setAttribute( "Value", treename )
-        except AssertionError, e:
+            
+        except AssertionError:
+            # If any exceptions were raised, the FirstCycle_config.xml file
+            # has probably changed. In that case this function should be 
+            # updated to reflect that change.
             print "ERROR: ", xmlinfile, "has an unexpected structure."
             print "ERROR: No configuration file will be written."
             return
-
-        import re
-        text=re.sub( """(?<=\n)([ \t]*\n)+""", "", dom.toprettyxml( encoding="UTF-8" ) ) #remove empty lines
-
-        outfile=open( fileName, "w" )
+        
+        # For some reason toprettyxml inserts lines of whitespaces.
+        # Use some regexp to get rid of those
+        text = re.sub( """(?<=\n)([ \t]*\n)+""", "", dom.toprettyxml( encoding ="UTF-8" ) )
+        outfile =open( configName, "w" )
         outfile.write( text )
+        outfile.close()
         return
     
     
@@ -644,17 +678,18 @@ class FullCycleCreator:
     # here already.
     #
     # @param directory The name of the directory where the file should be
-    def AddJobConfig( self, directory ):
+    def AddJobConfig( self, config_directory, **kwargs):
         import os.path
-        newfile=os.path.join( directory, "JobConfig.dtd" )
+        newfile = os.path.join( config_directory, "JobConfig.dtd" )
         if os.path.exists( newfile ):
             print "Keeping existing JobConfig.dtd"
             return
         
-        oldfile=os.path.join( os.getenv( "SFRAME_DIR" ), "user/config/JobConfig.dtd" )
+        oldfile = os.path.join( os.getenv( "SFRAME_DIR" ), "user/config/JobConfig.dtd" )
         if not os.path.exists( oldfile ):
             print "ERROR: Expected JobConfig.dtd file at", oldfile
             print "ERROR: JobConfig.dtd file not copied"
+            return
             
         import shutil
         shutil.copy( oldfile, newfile )
@@ -678,46 +713,43 @@ class FullCycleCreator:
     # @param varlist Optional parameter with a filename for a list of desired variable declarations
     # @param outtree Optional parameter with the name of the output TTree
     # @param analysis Optional parameter with the name of analysis package
-    def CreateCycle( self, cycleName, linkdef = "", rootfile = "", treename = "", varlist = "", outtree="", analysis="" ):
+    def CreateCycle( self, cycleName, linkdef = "", rootfile = "", treename = "", varlist = "", outtree = "", analysis = "" ):
         
-        namespace, className=self.SplitCycleName( cycleName )
+        namespace, className = self.SplitCycleName( cycleName )
         
+        # Make sure analysis is set
         if not analysis:
             import os
-            analysis=os.path.basename( os.getcwd( ) )
+            analysis = os.path.basename( os.getcwd() )
             print "Using analysis name", "\"%s\"" % analysis
         
         #First we take care of all the variables that the user may want to have read in.
         # If treename wasn't given, it can be read from the rootfile if it exits.
         if not treename:
-            treename=self.pyROOT.GetTreeName( rootfile ) # gives default if rootfile is empty
+            treename = self.pyROOT.GetTreeName( rootfile ) # gives default if rootfile is empty
         
         # The three parameters related to the input variables are varlist, treename and rootfile.
         # if neither rootfile or varlist are given, no input variable code will be written.
-        cycle_variables=[]
-        if rootfile or varlist:
-            # Prefer to read the input from the varlist
-            if varlist:
-                cycle_variables=self.ReadVariableSelection( varlist )
-            elif rootfile:
-                cycle_variables=self.pyROOT.ReadVars( rootfile, treename )
+        cycle_variables = []
+        # Prefer to read the input from the varlist
+        if varlist:
+            cycle_variables = self.ReadVariableSelection( varlist )
+        elif rootfile:
+            cycle_variables = self.pyROOT.ReadVars( rootfile, treename )
         
         # The list of input variables is now contained in cycle_variables
         # if this list is empty, the effect of this class should be identical to that of the old CycleCreators
         
         #From now on rootfile is only used in the config file:
         if not rootfile:
-            rootfile="your/input/file.root"
-        
-        formdict={"tab":self._tab, "className":className, "cycleName":cycleName, "namespace":namespace}
+            rootfile ="your/input/file.root"
         
         # Check if a directory called "include" exists in the current directory.
-        # If it does, put the new header in that directory. Otherwise leave it up
-        # to the CreateHeader function to put it where it wants.
+        # If it does, put the new header in that directory, otherwise, put it in the current directory
         import os.path
-        include_dir="./include/"
+        include_dir = "include/"
         if not os.path.exists( include_dir ):
-            include_dir=""
+            include_dir = ""
             
         if not linkdef:
             import glob
@@ -734,26 +766,39 @@ class FullCycleCreator:
                 return
         
         # Check if a directory called "src" exists in the current directory.
-        # If it does, put the new source in that directory. Otherwise leave it up
-        # to the CreateSource function to put it where it wants.
-        src_dir="./src/"
+        # If it does, put the new source in that directory, otherwise, put it in the current directory
+        src_dir = "src/"
         if not os.path.exists( src_dir ):
-            src_dir=""
+            src_dir = ""
 
         # Check if a directory called "config" exists in the current directory.
         # If it does, put the new configuration in that directory. Otherwise leave it up
         # to the CreateConfig function to put it where it wants.
-        config_dir="./config/"
+        config_dir = "config/"
         if not os.path.exists( config_dir ):
-            config_dir=""
+            config_dir = ""
         
         
         # All options seem to be in order. Generate the code.
-        header=self.CreateHeader( className, include_dir + className + ".h", namespace=namespace, varlist=cycle_variables, create_output=bool( outtree ) )
-        self.AddLinkDef( className, linkdef , namespace=namespace, varlist=cycle_variables )
-        self.CreateSource( className, src_dir + className + ".cxx", namespace=namespace, varlist=cycle_variables, create_output=bool( outtree ), header=header )
-        self.CreateConfig( className, fileName=config_dir + className + "_config.xml" , namespace=namespace, analysis=analysis, rootfile=rootfile, treename=treename, outtree=outtree )
-        self.AddJobConfig( directory=config_dir )
+        options = dict()
+        options[ "className" ]=className
+        options[ "namespace" ] = namespace
+        options[ "varlist" ] = cycle_variables
+        options[ "create_output" ] = bool( outtree )
+        options[ "headerName" ] = include_dir + className + ".h"
+        options[ "linkdefName" ] = linkdef
+        options[ "sourceName" ] = src_dir + className + ".cxx"
+        options[ "configName" ] = config_dir + className + "_config.xml"
+        options[ "analysis" ] = analysis
+        options[ "rootfile" ] = rootfile
+        options[ "treename" ] = treename
+        options[ "outtree" ] = outtree
+        options[ "config_directory" ] = config_dir
+        options[ "header" ] = self.CreateHeader( **options )
+        self.AddLinkDef( **options )
+        self.CreateSource( **options )
+        self.CreateConfig( **options )
+        self.AddJobConfig( **options )
         return
     
     # End of function declarations
@@ -763,14 +808,14 @@ class FullCycleCreator:
     #
     # Define the tab character to be used during code gerneration
     # may be, for example, "\t", "  ", "   " or "    "
-    _tab=" "*4
+    _tab = " "*4
     # _headerFile = ""
     # _sourceFile = ""
     
     ## @short Template for namespaced code
     #
     # This string is used to enclose code bodys in a namespace
-    _Template_namespace="namespace %(namespace)s {\n\n%(body)s\n\n}\n"
+    _Template_namespace = "namespace %(namespace)s {\n\n%(body)s\n} // of namespace %(namespace)s\n"
 
     ## @short Template for the body of a header file
     #
@@ -917,7 +962,7 @@ ClassImp( %(fullClassName)s );
 
 %(body)s
 """
-    _Template_LinkDef="""// Dear emacs, this is -*- c++ -*-
+    _Template_LinkDef = """// Dear emacs, this is -*- c++ -*-
 
 #ifdef __CINT__
 

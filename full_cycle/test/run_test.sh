@@ -32,7 +32,7 @@ echo "
     ======================================
 "
 
-sframe_create_full_cycle.py -n MySecondCycle -v ../TestVariableList.C -r MyFirstCycle.DATA.V1.root -t OutTree
+sframe_create_full_cycle.py -n my_namespace::MySecondCycle -v ../TestVariableList.C -r MyFirstCycle.DATA.V1.root -t OutTree
 
 echo "
     =========================================
@@ -41,4 +41,4 @@ echo "
 "
 
 make
-sframe_main config/MyFirstCycle_config.xml
+sframe_main config/MySecondCycle_config.xml
