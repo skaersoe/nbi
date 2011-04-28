@@ -16,6 +16,11 @@ echo "
     Creating MyFirstCycle analysis cycle
     ====================================
 "
+# This analyis will be called MyFirstCycle
+# It will read it's variable list and the tree name from ../myfile.root,
+# and will alse be configured to run over ../myfile.root.
+# Output variables will be declared, connected to the output tree OutTree,
+# and the input will be copied to the output tree
 sframe_create_full_cycle.py -n MyFirstCycle -r ../myfile.root -o OutTree
 echo "
     =========================================
@@ -29,8 +34,14 @@ echo "
     Now generating code for a second cycle
     ======================================
 "
-sframe_create_full_cycle.py -n my_namespace::MySecondCycle -v ../VariableList.C -r MyFirstCycle.DATA.V1.root -t OutTree
-# Note: PyRoot is not required for this usage. The name of the ROOT-file will only be used in the config.xml
+# This analysis cycle will be called MySecondCycle. It will reside within the 
+# namespace my_namespace. It will be configured to run over the file
+# MyFirstCycle.DATA.V1.root and read the tree named OutTree (given by -t).
+# Its list of variables will be read from VariableList.C.
+sframe_create_full_cycle.py -n my_namespace::MySecondCycle -v ../VariableList.C \
+    -r MyFirstCycle.DATA.V1.root -t OutTree
+# Note: PyRoot is not required for this usage. The name of the ROOT-file will only 
+# be used in the config.xml
 echo "
     =========================================
     Now compiling and running the second cycle

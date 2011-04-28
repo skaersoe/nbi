@@ -64,6 +64,10 @@ class FullCycleCreator:
             self.typename = typename
             self.stl_like = stl_like
             self.commented = commented
+            # Sanitize the name. Root names can be anything.
+            # We must be careful to have a valid C++ variable name in front of us
+            import re
+            self.cname = re.sub("""[ :.,;\\/|`'"()\[\]{}<>~?!@#$%^&*+=\-]""","_",name) 
         
         # End of Class Variable
     
@@ -110,7 +114,7 @@ class FullCycleCreator:
             varargs[ "commented" ] = match.group( "comment" ) # whether the variable was commented out. Will be '//' if it was
             varargs[ "typename" ] = match.group( "type" )
             varargs[ "name" ] = match.group( "name" )
-            varargs[ "stl_like" ] = self.Is_stl_like( match.group( "type" ) )
+            varargs[ "stl_like" ] = match.group( "point" ) #self.Is_stl_like( match.group( "type" ) )
             varlist.append( self.Variable( **varargs ) )
         
         return varlist
@@ -227,7 +231,11 @@ class FullCycleCreator:
                     varargs[ "commented" ] = ""
                     varargs[ "typename" ] = leaf.GetTypeName()
                     varargs[ "name" ] = leaf.GetName()
-                    varargs[ "stl_like" ] = FullCycleCreator.Is_stl_like( leaf.GetTypeName() )
+                    #varargs[ "stl_like" ] = FullCycleCreator.Is_stl_like( leaf.GetTypeName() )
+                    if type( leaf ) in (ROOT.TLeafElement, ROOT.TLeafObject):
+                        varargs[ "stl_like" ] = "*"
+                    else:
+                        varargs[ "stl_like" ] = ""
                     varlist.append( FullCycleCreator.Variable( **varargs ) )
             f.Close()
             return varlist
@@ -237,6 +245,9 @@ class FullCycleCreator:
     
     ## @short Determine whether the type named by typename needs to be accessed
     # as an object or as a basic type.
+    # Note: The method is now deprecated. The functionality is achieved by checking
+    # for the existence of a * in the declaration in the case of a Varlist. In a 
+    # rootfile, the type of the leaf-container is tested.
     @staticmethod
     def Is_stl_like( typename ):
 
@@ -341,10 +352,10 @@ class FullCycleCreator:
         for var in varlist:
             subs_dict = dict( formdict )
             subs_dict.update( var.__dict__ )
-            inputVariableDeclarations += "%(tab)s%(commented)s%(typename)s\t%(stl_like)s%(name)s;\n" % subs_dict
+            inputVariableDeclarations += "%(tab)s%(commented)s%(typename)s\t%(stl_like)s%(cname)s;\n" % subs_dict
 
             if create_output:
-                outputVariableDeclarations += "%(tab)s%(commented)s%(typename)s\tout_%(name)s;\n" % subs_dict
+                outputVariableDeclarations += "%(tab)s%(commented)s%(typename)s\tout_%(cname)s;\n" % subs_dict
         
         formdict[ "inputVariableDeclarations" ] = inputVariableDeclarations
         formdict[ "outputVariableDeclarations" ] = outputVariableDeclarations
@@ -363,7 +374,7 @@ class FullCycleCreator:
         else:
             ns_body = body
         
-        full_contents = self._Template_header_Frame % {"body":ns_body, "class":( namespace+"_"+className ).upper(), "fullClassName":namespace+"::"+className}
+        full_contents = self._Template_header_Frame % {"body":ns_body, "capclass":( namespace+"_"+className ).upper(), "fullClassName":namespace+"::"+className}
 
         # Write the header file:
         output = open( headerName, "w" )
@@ -429,13 +440,13 @@ class FullCycleCreator:
             subs_dict =dict( formdict )
             subs_dict.update( var.__dict__ )
 
-            inputVariableConnections += "%(tab)s%(commented)sConnectVariable( InTreeName.c_str(), \"%(name)s\", %(name)s );\n" % subs_dict
+            inputVariableConnections += "%(tab)s%(commented)sConnectVariable( InTreeName.c_str(), \"%(name)s\", %(cname)s );\n" % subs_dict
 
             if create_output:
-                outputVariableConnections += "%(tab)s%(commented)sDeclareVariable( out_%(name)s, \"%(name)s\" );\n" % subs_dict
-                outputVariableFilling += "%(tab)s%(commented)sout_%(name)s = %(stl_like)s%(name)s;\n" % subs_dict
+                outputVariableConnections += "%(tab)s%(commented)sDeclareVariable( out_%(cname)s, \"%(name)s\" );\n" % subs_dict
+                outputVariableFilling += "%(tab)s%(commented)sout_%(cname)s = %(stl_like)s%(cname)s;\n" % subs_dict
                 if var.stl_like:
-                    outputVariableClearing += "%(tab)s%(commented)sout_%(name)s.clear();\n" % subs_dict
+                    outputVariableClearing += "%(tab)s%(commented)sout_%(cname)s.clear();\n" % subs_dict
         
         formdict[ "inputVariableConnections" ] = inputVariableConnections
         formdict[ "outputVariableConnections" ] = outputVariableConnections
@@ -517,6 +528,7 @@ class FullCycleCreator:
             # Overwrite the file with the new contents:
             output = open( linkdefName, "w" )
             #Insert the newlines before the #endif
+            # """(?=\n#endif)""" matches the empty string that is immediately succeded by \n#endif
             output.write( re.sub( """(?=\n#endif)""", new_lines+"\n", text ) )
             output.close()
 
@@ -808,7 +820,9 @@ class FullCycleCreator:
     #
     # Define the tab character to be used during code gerneration
     # may be, for example, "\t", "  ", "   " or "    "
-    _tab = " "*4
+    # Note: If you want to change the indentation of all the genrated code
+    # you also need to change it in all the following templates.
+    _tab = " " * 4 # four spaces
     # _headerFile = ""
     # _sourceFile = ""
     
@@ -876,8 +890,8 @@ private:
     # This string is used by CreateHeader to create a header file
     # once the body has already been generated
     _Template_header_Frame = """// Dear emacs, this is -*- c++ -*-
-#ifndef %(class)-s_H
-#define %(class)-s_H
+#ifndef %(capclass)-s_H
+#define %(capclass)-s_H
 
 // SFrame include(s):
 #include \"core/include/SCycleBase.h\"
@@ -887,7 +901,7 @@ using namespace std;
 
 %(body)s
 
-#endif // %(class)-s_H
+#endif // %(capclass)-s_H
 
 """
     ## @short Template for the body of a source file
