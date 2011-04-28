@@ -58,11 +58,11 @@ class FullCycleCreator:
         or by the VariableSelectionReader from a C-like file with variable declarations.
         """
         
-        def __init__( self, name, typename, commented, stl_like ):
+        def __init__( self, name, typename, commented, pointer ):
             super( FullCycleCreator.Variable, self ).__init__()
             self.name = name
             self.typename = typename
-            self.stl_like = stl_like
+            self.pointer = pointer
             self.commented = commented
             # Sanitize the name. Root names can be anything.
             # We must be careful to have a valid C++ variable name in front of us
@@ -114,7 +114,7 @@ class FullCycleCreator:
             varargs[ "commented" ] = match.group( "comment" ) # whether the variable was commented out. Will be '//' if it was
             varargs[ "typename" ] = match.group( "type" )
             varargs[ "name" ] = match.group( "name" )
-            varargs[ "stl_like" ] = match.group( "point" ) #self.Is_stl_like( match.group( "type" ) )
+            varargs[ "pointer" ] = match.group( "point" ) #self.Is_stl_like( match.group( "type" ) )
             varlist.append( self.Variable( **varargs ) )
         
         return varlist
@@ -231,11 +231,11 @@ class FullCycleCreator:
                     varargs[ "commented" ] = ""
                     varargs[ "typename" ] = leaf.GetTypeName()
                     varargs[ "name" ] = leaf.GetName()
-                    #varargs[ "stl_like" ] = FullCycleCreator.Is_stl_like( leaf.GetTypeName() )
+                    #varargs[ "pointer" ] = FullCycleCreator.Is_stl_like( leaf.GetTypeName() )
                     if type( leaf ) in (ROOT.TLeafElement, ROOT.TLeafObject):
-                        varargs[ "stl_like" ] = "*"
+                        varargs[ "pointer" ] = "*"
                     else:
-                        varargs[ "stl_like" ] = ""
+                        varargs[ "pointer" ] = ""
                     varlist.append( FullCycleCreator.Variable( **varargs ) )
             f.Close()
             return varlist
@@ -243,16 +243,15 @@ class FullCycleCreator:
         #End of Class ROOT_Access
     
     
-    ## @short Determine whether the type named by typename needs to be accessed
-    # as an object or as a basic type.
-    # Note: The method is now deprecated. The functionality is achieved by checking
-    # for the existence of a * in the declaration in the case of a Varlist. In a 
-    # rootfile, the type of the leaf-container is tested.
+    ## @short Determine whether the type named by typename is an stl_container
+    # That should be cleared at the start of the event execution
     @staticmethod
     def Is_stl_like( typename ):
 
         #stl_like = "vector" in typename
-        stl_like = bool( re.search( """<.+>""", typename ) ) or bool( "vector" in typename )
+        #stl_like = bool( re.search( """<.+>""", typename ) ) or bool( "vector" in typename )
+        import re
+        stl_like = bool( re.search( "(vector|list|set|map)\s*<", typename ) )
         # May want to include other stl_containers here, but I don't expect others to be used.
         # ... and really there is only so far you can go with automatic gode generation.
         if stl_like:
@@ -352,7 +351,7 @@ class FullCycleCreator:
         for var in varlist:
             subs_dict = dict( formdict )
             subs_dict.update( var.__dict__ )
-            inputVariableDeclarations += "%(tab)s%(commented)s%(typename)s\t%(stl_like)s%(cname)s;\n" % subs_dict
+            inputVariableDeclarations += "%(tab)s%(commented)s%(typename)s\t%(pointer)s%(cname)s;\n" % subs_dict
 
             if create_output:
                 outputVariableDeclarations += "%(tab)s%(commented)s%(typename)s\tout_%(cname)s;\n" % subs_dict
@@ -444,8 +443,9 @@ class FullCycleCreator:
 
             if create_output:
                 outputVariableConnections += "%(tab)s%(commented)sDeclareVariable( out_%(cname)s, \"%(name)s\" );\n" % subs_dict
-                outputVariableFilling += "%(tab)s%(commented)sout_%(cname)s = %(stl_like)s%(cname)s;\n" % subs_dict
-                if var.stl_like:
+                outputVariableFilling += "%(tab)s%(commented)sout_%(cname)s = %(pointer)s%(cname)s;\n" % subs_dict
+                if var.pointer and self.Is_stl_like( var.typename ):
+                    # Not all pointer-accessed types can do this, only stl-vectors
                     outputVariableClearing += "%(tab)s%(commented)sout_%(cname)s.clear();\n" % subs_dict
         
         formdict[ "inputVariableConnections" ] = inputVariableConnections
@@ -505,7 +505,7 @@ class FullCycleCreator:
         # do any harm, We might as well include it for all object types
         types = set()
         for var in varlist:
-            if var.stl_like:
+            if var.pointer:
                 types.add( var.typename )
         
         for typename in types:
