@@ -175,7 +175,12 @@ class NBIWebDAV(object):
                     print '<In FileName="%s%s" Lumi="1.0" />' % (BASE_SERVER_URL_XROOT, line["name"])
             else:
 
-                print ("{0}  {1:>%d} MB  {2}" % (size_buff_len)).format(str(dm), line["size"]/1000000,line["name"].replace(BASE_URL_PATH, ""))# line["name"][line["name"].find("/user/"):])
+                if hasattr(str(), "format"): # Check if we can use the str.format() method
+                    print ("{0}  {1:>%d} MB  {2}" % (size_buff_len)).format(str(dm), line["size"]/1000000,line["name"].replace(BASE_URL_PATH, ""))# line["name"][line["name"].find("/user/"):])
+                else:
+                    print "%s%s" % (BASE_SERVER_URL, line["name"])
+                    
+                    
             
             
 			
