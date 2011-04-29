@@ -8,10 +8,13 @@ Created by Morten Dam Jørgensen on 2011-03-03.
 Copyright (c) 2011 Niels Bohr Institute. All rights reserved.
 """
 
+# FIXME: Clean up silly redundant strings:
+BASE_SERVER_URL_XROOT = "root://ftp1.ndgf.org"
+BASE_SERVER_URL = "https://ftp1.ndgf.org:2881"
 BASE_URL = "https://ftp1.ndgf.org:2881/atlas/disk/atlaslocalgroupdisk/dk%s"
 BASE_URL_STR = "https://ftp1.ndgf.org:2881/atlas/disk/atlaslocalgroupdisk/dk"
+BASE_URL_PATH = "/atlas/disk/atlaslocalgroupdisk/dk"
 
-BASE_URL_XROOT = "root://ftp1.ndgf.org/atlas/disk/atlaslocalgroupdisk/dk"
 
 import sys
 import getopt
@@ -164,13 +167,17 @@ class NBIWebDAV(object):
 
         for line in result2:
             dm = datetime.datetime.fromtimestamp(time.mktime(time.strptime(line["modified"], "%a, %d %b %Y %H:%M:%S %Z")))
+
             if "f" in self.flags: # Full path listing
-                print "%s%s" % (path, line["name"])
-            elif "x" in self.flags:
+                print "%s%s" % (BASE_SERVER_URL, line["name"])
+            elif "x" in self.flags or "X" in self.flags:
                 if len(line["name"]) > 1 and not line["name"][-1] == "/":
-                    print '<In FileName="%s%s" Lumi="1.0" />' % (path.replace(BASE_URL_STR, BASE_URL_XROOT), line["name"])
+                    print '<In FileName="%s%s" Lumi="1.0" />' % (BASE_SERVER_URL_XROOT, line["name"])
             else:
-                print ("{0}  {1:>%d} MB  {2}" % (size_buff_len)).format(str(dm), line["size"]/1000000, line["name"])
+
+                print ("{0}  {1:>%d} MB  {2}" % (size_buff_len)).format(str(dm), line["size"]/1000000,line["name"].replace(BASE_URL_PATH, ""))# line["name"][line["name"].find("/user/"):])
+            
+            
 			
 		
 class Usage(Exception):
