@@ -178,7 +178,7 @@ class NBIWebDAV(object):
                 if hasattr(str(), "format"): # Check if we can use the str.format() method (available in Python > 2.6)
                     print ("{0}  {1:>%d} MB  {2}" % (size_buff_len)).format(str(dm), line["size"]/1000000,line["name"].replace(BASE_URL_PATH, ""))# line["name"][line["name"].find("/user/"):])
                 else:
-                    # Fallback to old string formatting style
+                    # Fallback to old string formatting style (ugly)
                     print "%s\t%s MB\t%s" % (str(dm), line["size"]/1000000, line["name"].replace(BASE_URL_PATH, "")) 
 
                     
