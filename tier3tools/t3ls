@@ -41,7 +41,9 @@ Examples:
 	t3ls /user/username
 	t3ls -f /user/
 
-'''
+    Base url: %s
+    xroot base: %s
+''' % (BASE_URL_STR, BASE_SERVER_URL_XROOT + BASE_URL_PATH)
 
 from xml.parsers import expat
 
