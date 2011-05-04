@@ -175,8 +175,10 @@ class FullCycleCreator:
         
         def GetTreeName( self, rootfile ):
             """
-            Get the name of the first treename in the file named rootfile.
+            Get the name of the treename in the file named rootfile.
             Or just return 'TreeName' if any errors show up.
+            If several trees are present, get the one with the largest number
+            of branches.
             """
             treename = "TreeName"
             if not self.Initalize():
@@ -190,10 +192,21 @@ class FullCycleCreator:
             if not f:
                 print rootfile, "could not be opened. Using default tree name:", treename
                 return treename
+            # Get a list of all TKeys to TTrees
             trees = [ key for key in self.TCollIter( f.GetListOfKeys() ) if key.GetClassName() == "TTree" ]
-            if len( trees ):
+            if len( trees ) == 1:
+                # Just 1? Use it
                 treename = trees[ 0 ].GetName()
-                print "Found TTree", "\"%s\"" % treename
+            elif len( trees ) > 1:
+                print "Avaliable tree names:", ", ".join( [ key.GetName() for key in trees ] )
+                # Find the tree with the largest number of branches.
+                nbranch = -1;
+                for key in trees:
+                    tree = key.ReadObj()
+                    if tree.GetNbranches() > nbranch:
+                        nbranch = tree.GetNbranches()
+                        treename = tree.GetName()
+            print "Using treename:", treename
             f.Close()
             
             return treename
@@ -251,7 +264,8 @@ class FullCycleCreator:
         #stl_like = "vector" in typename
         #stl_like = bool( re.search( """<.+>""", typename ) ) or bool( "vector" in typename )
         import re
-        stl_like = bool( re.search( "(vector|list|set|map)\s*<", typename ) )
+        # Check if the typename contains structures like "vector <int>" or similar for list, map or set 
+        stl_like = bool( re.search( "(vector|list|set|map)\s*<.*>", typename ) )
         # May want to include other stl_containers here, but I don't expect others to be used.
         # ... and really there is only so far you can go with automatic gode generation.
         if stl_like:

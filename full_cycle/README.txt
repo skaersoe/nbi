@@ -24,8 +24,9 @@ The following describes some typical usecases:
     For this to work ntuple.root should contain a TTree. The name of the TTree as 
     well as the list of variables will be read from ntuple.root. Code will be 
     generated to read all the variables in ntuple.root. The config.xml file will 
-    also be configured to read this file. If a different TTree than the first one
-    should be used, specify with --treename.
+    also be configured to read this file. By default, the TTree with the largest
+    number of branches will be used. If a different TTree should be used, specify 
+    with --treename.
     
     If a different set of variables is desired, or no root-file can be supplied,
     the script can be called like this:
