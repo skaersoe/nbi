@@ -69,6 +69,11 @@ class FullCycleCreator:
             import re
             self.cname = re.sub("""[ :.,;\\/|`'"()\[\]{}<>~?!@#$%^&*+=\-]""","_",name) 
         
+        def __repr__(self):
+            return "%s%s %s%s" % (self.commented, self.typename, self.pointer, self.name )
+        def __str__(self):
+            return self.__repr__()
+        
         # End of Class Variable
     
     ## @short Function creating a configuration file for the new cycle
@@ -99,22 +104,43 @@ class FullCycleCreator:
             return varlist
         
         # Use some regexp magic to change all /*...*/ style comments to // style comments
-        text = re.sub( """\*/( ?!\n)""", "*/\n", text ) # append    newline to every */
+        text = re.sub( """\*/[^\n]""", "*/\n", text ) # append newline to every */ that isn't already followed by one
         while re.search( """/\*""", text ):  # While ther still are /* comments
-            text = re.sub( """/\*(?P<line>.*?)(?P<end>\n|\*/)""", """//\g<line>/*\g<end>""", text ) # move the /* to the next newline or to the end of the comment
+            text = re.sub( """/\*(?P<line>.*?)(?P<end>\n|\*/)""", """// \g<line>/*\g<end>""", text ) # move the /* to the next newline or */
             text = re.sub( """/\*\*/""", "", text )  # remove zero content comments
             text = re.sub( """/\*\n""", "\n/*", text ) # move the /* past the newline
         
+        text = re.sub("""(?<!\n)//""","\n//", text ) # Make sure // always starts a new line
+        text = re.sub("""\n(\s)*""","\n", text ) # clean up any sequence of successive whitespaces starting with a newline
+        text = re.sub("""^(\s)*""","", text ) # clean up any sequence of successive whitespaces at the start of the file
+        text = re.sub("""(\s)*\n""","\n", text ) # clean up any sequence of successive whitespaces at line endings
+        
+        # the text should now be quite tidy and ready for parsing.
+        
         # Find every variable definition.
         # Definitions may start with a //.
-        # After that I expect there to be a typename of the form UInt_t or int or std::vector<double>, 
-        # and finally maybe a ; and some spaces.
-        for match in re.finditer( """[ \t]*(?P<comment>(?://)?)[ \t]*(?P<type>[a-zA-Z_][a-zA-Z_0-9:]*(?:[ \t]*<.+>)?)[ \t]*(?P<point>\*?)[ \t]*(?P<name>[a-zA-Z_][a-zA-Z_0-9]*)[ \t;]*""", text ):
+        # After that I expect there to be a typename of the form UInt_t or int or std::vector<double> etc.
+        # then a name, 
+        # and finally a;
+        query="""(?P<comment>(?://)?)[ \t]*""" # First find out if the line is commented
+        # next is the typename which starts with a word chracter [a-zA-Z_]
+        query+="""(?P<type>[a-zA-Z_][a-zA-Z_0-9:]*(?:[ \t]*<.+>)?)""" 
+        # but can from there on also contain numbers [a-zA-Z_0-9:]*
+        # finally it may contain a template structure (?:[ \t]*<.+>)?
+        # next comes the issue of pointers. 
+        query+="""(?:(?:[ \t]*(?P<point>\*)[ \t]*)|(?:(?<!\*)[ \t]+(?!\*)))"""
+        # if there is a star, it can have whitespaces before or after.
+        # if there is no star, there must be some whitespace.
+        # and now for the name
+        query+="""(?P<name>[a-zA-Z_][a-zA-Z_0-9]*)[ \t]*;[ \t;]*"""
+        for match in re.finditer( query, text ):
             varargs = {}
             varargs[ "commented" ] = match.group( "comment" ) # whether the variable was commented out. Will be '//' if it was
             varargs[ "typename" ] = match.group( "type" )
             varargs[ "name" ] = match.group( "name" )
-            varargs[ "pointer" ] = match.group( "point" ) #self.Is_stl_like( match.group( "type" ) )
+            varargs[ "pointer" ] = match.group( "point" )
+            if not varargs[ "pointer" ]:
+                varargs[ "pointer" ] = "" # just in case there was no poiner to match.
             varlist.append( self.Variable( **varargs ) )
         
         return varlist
