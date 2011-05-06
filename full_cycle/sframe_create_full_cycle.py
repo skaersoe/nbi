@@ -9,6 +9,8 @@
 #* @author Johannes Haller    <Johannes.Haller@cern.ch>            - Hamburg
 #* @author A. Krasznahorkay <Attila.Krasznahorkay@cern.ch> - CERN/Debrecen
 #*
+# For bugs/comments on this particluar script, please contact:            #
+#  Simon Heisterkamp <heisterkamp@nbi.dk>        - NBI/Copenhagen         #
 #***************************************************************************
 #
 # This script can be used to quickly create a new analysis cycle in
