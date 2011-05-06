@@ -1,3 +1,5 @@
+// This is a comment
+// comments are excluded as long as they don't look like declarations.
 //UInt_t RunNumber;
 int i;
 //float f;
