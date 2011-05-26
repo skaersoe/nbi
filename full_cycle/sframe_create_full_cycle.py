@@ -8,16 +8,16 @@
 #* @author David Berge            <David.Berge@cern.ch>                    - CERN
 #* @author Johannes Haller    <Johannes.Haller@cern.ch>            - Hamburg
 #* @author A. Krasznahorkay <Attila.Krasznahorkay@cern.ch> - CERN/Debrecen
-#*
-# For bugs/comments on this particluar script, please contact:            #
-#  Simon Heisterkamp <heisterkamp@nbi.dk>        - NBI/Copenhagen         #
+#* @author S. Heisterkamp   <heisterkamp@nbi.dk>           - Copenhagen    #
+#* For bugs/comments on this particluar script, please contact the last    #
+#* autor in the list above                                                 #
 #***************************************************************************
 #
 # This script can be used to quickly create a new analysis cycle in
 # the user's package. If it's called in an arbitrary directory, then
 # all the created files are put in the current directory. However
-# when invoking it in an SFrame library directory (like SFrame/user)
-# it will put the files in the correct places and adds the entry
+# when invoking it in an SFrame package directory (like SFrame/user)
+# it will put the files in the correct places and add the entry
 # to the already existing LinkDef file.
 #
 
