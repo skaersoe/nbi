@@ -1,14 +1,15 @@
 ###########################################################################
 # @Project: SFrame - ROOT-based analysis framework for ATLAS              #
 #                                                                         #
-# @author Stefan Ask        <Stefan.Ask@cern.ch>            - Manchester  #
+# @author Stefan Ask       <Stefan.Ask@cern.ch>           - Manchester    #
 # @author David Berge      <David.Berge@cern.ch>          - CERN          #
 # @author Johannes Haller  <Johannes.Haller@cern.ch>      - Hamburg       #
 # @author A. Krasznahorkay <Attila.Krasznahorkay@cern.ch> - CERN/Debrecen #
-#                                                                         #
-# For bugs/comments on this particluar script, please contact:            #
-#  Simon Heisterkamp <heisterkamp@nbi.dk>        - NBI/Copenhagen         #
+# @author S. Heisterkamp   <heisterkamp@nbi.dk>           - Copenhagen    #
+# For bugs/comments on this particluar script, please contact the last    #
+# autor in the list above                                                 #
 ###########################################################################
+
 
 ## @package FullCycleCreators
 #    @short Functions for creating a new analysis cycle torso
@@ -25,7 +26,7 @@
 ## @short Class creating analysis cycle templates
 #
 # This class can be used to create a template cycle inheriting from
-# SCycleBase. It is quite smart actually. If you call CycleCreator.CreateCycle
+# SCycleBase. It is quite smart actually. If you call FullCycleCreator.CreateCycle
 # from inside an "SFrame package", it will find the right locations for the
 # created files and extend an already existing LinkDef.h file with the
 # line for the new cycle.
@@ -34,20 +35,12 @@ import re
 
 class FullCycleCreator:
     
-    ## @short Function creating a configuration file for the new cycle
+    ## @short Class the contain the information related to one variable.tree-branch
     #
-    # This function is supposed to create an example configuration file
-    # for the new cycle. It uses PyXML to write the configuration, and
-    # exactly this causes a bit of trouble. PyXML is about the worst
-    # XML implementation I ever came accross... There are tons of things
-    # that it can't do. Not to mention the lack of any proper documentation.
-    #
-    # All in all, the resulting XML file is not too usable at the moment, 
-    # it's probably easier just copying one of the example cycles from
-    # SFrame/user/config and adjusting it to the user's needs...
-    #
-    # @param className Name of the analysis cycle. Can contain the namespace name.
-    # @param fileName  Optional parameter with the configuration file name
+    # This is a simple container class that holds, aomngst other things the 
+    # type-name and name of a variable. A list of instances of this class is created
+    # either by parsing a list of variable declarations or from a TTree inside a 
+    # root-file in the course of the cycle-creation.
     class Variable( object ):
         """
         One of the variables that will be used in the cycle.
@@ -59,7 +52,17 @@ class FullCycleCreator:
         A list of variables is assembled either by the TreeReader directly from a root-file, 
         or by the VariableSelectionReader from a C-like file with variable declarations.
         """
-        
+        ## @short Constructor of the Variable class
+        #
+        # This function takes the arguments and saves them as member variables.
+        # on top of that, it sanitizes the name to create a member called cname
+        # that is suitable as a c++ variable name.
+        #
+        # @param name The name of the variable.
+        # @param typename The type of the variable, such as int or vector<float> etc.
+        # @param name The name of the variable.
+        # @param commeneted Should be eiter "" or "//" to indicate wheter to use this variable or not
+        # @param pointer Should be eiter "" or "*" to indicate whether this variable needs to be accessed as an object.
         def __init__( self, name, typename, commented, pointer ):
             super( FullCycleCreator.Variable, self ).__init__()
             self.name = name
@@ -69,7 +72,12 @@ class FullCycleCreator:
             # Sanitize the name. Root names can be anything.
             # We must be careful to have a valid C++ variable name in front of us
             import re
-            self.cname = re.sub("""[ :.,;\\/|`'"()\[\]{}<>~?!@#$%^&*+=\-]""","_",name) 
+            self.cname = re.sub( """[^_0-9a-zA-Z]""", "_", self.name )  # These are the only valid characters in C++ variable names
+            if not re.match( "[a-zA-Z_]", self.cname ):  # furthermore, the name must start with a letter, not a number
+                self.cname = "_" + self.cname
+            
+            if self.cname != self.name:
+                print >>sys.stderr, "WARNING: Illegal characters in branch name \"%s\", using \"%s\" instead. " % (self.name, self.cname)
         
         def __repr__(self):
             return "%s%s %s%s" % (self.commented, self.typename, self.pointer, self.name )
@@ -78,20 +86,21 @@ class FullCycleCreator:
         
         # End of Class Variable
     
-    ## @short Function creating a configuration file for the new cycle
+    ## @short Function to read the variable declarations from a file
     #
-    # This function is supposed to create an example configuration file
-    # for the new cycle. It uses PyXML to write the configuration, and
-    # exactly this causes a bit of trouble. PyXML is about the worst
-    # XML implementation I ever came accross... There are tons of things
-    # that it can't do. Not to mention the lack of any proper documentation.
+    # The function uses regular expressions to read a list of c++ 
+    # variable declarations from a file and assembles a list of 
+    # "Variable" instances.
+    # 
+    # The file should contain at most one variable declaration per line.
+    # Commented out variable declarations are used and flagged as commented.
+    # Other comments are ignored as long as they do not resemble declarations.
+    # Objects that need to be accessed as pointers, such as stl vectors, should
+    # be declared as pointers, as done by the ROOT MakeClass, for example.
     #
-    # All in all, the resulting XML file is not too usable at the moment, 
-    # it's probably easier just copying one of the example cycles from
-    # SFrame/user/config and adjusting it to the user's needs...
+    # The returned object has the same structure as that returned by ROOT_Access.ReadVars
     #
-    # @param className Name of the analysis cycle. Can contain the namespace name.
-    # @param fileName  Optional parameter with the configuration file name
+    # @param fileName Path of the file that contains the list of variables.
     def ReadVariableSelection( self, filename ):
         """
         Reads a list of variable declarations from file into a structured format.
@@ -123,21 +132,21 @@ class FullCycleCreator:
         # Definitions may start with a //.
         # After that I expect there to be a typename of the form UInt_t or int or std::vector<double> etc.
         # then a name, 
-        # and finally a;
+        # and finally a semicolon
         query="""(?P<comment>(?://)?)[ \t]*""" # First find out if the line is commented
         # next is the typename which starts with a word chracter [a-zA-Z_]
-        query+="""(?P<type>[a-zA-Z_][a-zA-Z_0-9:]*(?:[ \t]*<.+>)?)""" 
+        query+="""(?P<type>[a-zA-Z_][a-zA-Z0-9_:]*(?:[ \t]*<.*>)?)""" 
         # but can from there on also contain numbers [a-zA-Z_0-9:]*
-        # finally it may contain a template structure (?:[ \t]*<.+>)?
+        # finally it may contain a template structure (?:[ \t]*<.*>)?
         # next comes the issue of pointers. 
         query+="""(?:(?:[ \t]*(?P<point>\*)[ \t]*)|(?:(?<!\*)[ \t]+(?!\*)))"""
         # if there is a star, it can have whitespaces before or after.
-        # if there is no star, there must be some whitespace.
+        # if there is no star, there must be some whitespace which is neiter preceded nor succede by a star.
         # and now for the name
         query+="""(?P<name>[a-zA-Z_][a-zA-Z_0-9]*)[ \t]*;[ \t;]*"""
         for match in re.finditer( query, text ):
             varargs = {}
-            varargs[ "commented" ] = match.group( "comment" ) # whether the variable was commented out. Will be '//' if it was
+            varargs[ "commented" ] = match.group( "comment" ) # whether the variable was commented out. Will be '//' if it was, or "" if it wasn't
             varargs[ "typename" ] = match.group( "type" )
             varargs[ "name" ] = match.group( "name" )
             varargs[ "pointer" ] = match.group( "point" )
@@ -147,20 +156,12 @@ class FullCycleCreator:
         
         return varlist
     
-    ## @short Function creating a configuration file for the new cycle
+    ## @short Class to encapsulate all pyROOT access
     #
-    # This function is supposed to create an example configuration file
-    # for the new cycle. It uses PyXML to write the configuration, and
-    # exactly this causes a bit of trouble. PyXML is about the worst
-    # XML implementation I ever came accross... There are tons of things
-    # that it can't do. Not to mention the lack of any proper documentation.
-    #
-    # All in all, the resulting XML file is not too usable at the moment, 
-    # it's probably easier just copying one of the example cycles from
-    # SFrame/user/config and adjusting it to the user's needs...
-    #
-    # @param className Name of the analysis cycle. Can contain the namespace name.
-    # @param fileName  Optional parameter with the configuration file name
+    # This class and its methods represent the only cases where I need
+    # access to pyROOT. I attempt to import pyROOT only once. It it fails,
+    # I attempt to give meaningful default values instead.
+    # 
     class ROOT_Access:
         """
         A class that contains all the pyROOT related tasks.
@@ -171,7 +172,8 @@ class FullCycleCreator:
         def __init__( self ):
             self.intitalized = 0
         
-        
+        ## @short Function to import pyROOT
+        #
         def Initalize( self ):
             if self.intitalized:
                 return bool( self.ROOT )
@@ -187,7 +189,9 @@ class FullCycleCreator:
             
             return bool( self.ROOT )
         
-        
+        ## @short Function to return a python iterator over any TCollection
+        #
+        # @param tcoll TCollection to iterate over
         def TCollIter( self, tcoll ):
             """Gives an iterator over anything that the ROOT.TIter can iterate over."""
             if not self.Initalize():
@@ -200,7 +204,13 @@ class FullCycleCreator:
                 item = it.Next()
             return
         
-        
+        ## @short Function to extract a relavnt tree name froma rootfile
+        #
+        # This function looks inside a rootfile and returns the name of 
+        # the TTree with the largest number of branches. If any problems
+        # are encountered "TreeName" is returned.
+        #
+        # @param rootfile Path of the rootfile to read
         def GetTreeName( self, rootfile ):
             """
             Get the name of the treename in the file named rootfile.
@@ -239,7 +249,14 @@ class FullCycleCreator:
             
             return treename
         
-        
+        ## @short Function to construct a list of Variable instances from a TTree
+        #
+        # This function reads a TTree from a rootfile and constructs a list of
+        # Variable class intances that can be used in the construction of the cycle.
+        # The returned object has the same structure as that returned by ReadVariableSelection
+        #
+        # @param rootfile Path of the rootfile to read
+        # @param treename Name of the TTree to use
         def ReadVars( self, rootfile, treename ):
             """
             Reads a list of variables from a root-file into a structured 
@@ -284,8 +301,13 @@ class FullCycleCreator:
         #End of Class ROOT_Access
     
     
-    ## @short Determine whether the type named by typename is an stl_container
-    # That should be cleared at the start of the event execution
+    ## @short Function to determine whether the type named by typename is an stl_container
+    #
+    # C++ Standard Library containers should be cleared at the beginning of the ExecuteEvent
+    # method when they are used for output. This little function determines if a given typename
+    # is an stl container using regular expressions.
+    # 
+    # @param typename variable type name to evaluate.
     @staticmethod
     def Is_stl_like( typename ):
 
@@ -301,31 +323,32 @@ class FullCycleCreator:
         else:
             return ""
     
-    ## @short Indent a text body for inserting into a namespace
+    ## @short Function to indent a text body
+    # 
+    # Evenry line in the string that is passed to this function is prepended with the Tab character
+    # that is defined as a class member of this class.
+    # 
+    # @param text The text body to indent
     def Indent( self, text ):
         return re.sub( """(?<=:^|\n)(?=.)""", """%s\g<0>""" % self._tab, text )
     
     # See end of class definition for string literals
-    
+
+    ## @short Constructor
+    # 
+    # Instantiates a Root_Access object for later use.
+    # 
     def __init__( self ):
         self._headerFile = ""
         self._sourceFile = ""
         self.pyROOT = self.ROOT_Access()
     
-    ## @short Function creating a configuration file for the new cycle
+    ## @short Function to split the cycle name into a namespace and a base-name
     #
-    # This function is supposed to create an example configuration file
-    # for the new cycle. It uses PyXML to write the configuration, and
-    # exactly this causes a bit of trouble. PyXML is about the worst
-    # XML implementation I ever came accross... There are tons of things
-    # that it can't do. Not to mention the lack of any proper documentation.
+    # The split is done at the last double colon "::". At the moment this only
+    # produces valid C++ code for up to one layer of namespacing.
     #
-    # All in all, the resulting XML file is not too usable at the moment, 
-    # it's probably easier just copying one of the example cycles from
-    # SFrame/user/config and adjusting it to the user's needs...
-    #
-    # @param className Name of the analysis cycle. Can contain the namespace name.
-    # @param fileName  Optional parameter with the configuration file name
+    # @param cycleName Full cycle name to be split
     def SplitCycleName( self, cycleName ):
         """
         splits the cycleName into a class name and a namespace name
@@ -340,20 +363,13 @@ class FullCycleCreator:
         
         return ( namespace, className )
     
-    ## @short Function creating a configuration file for the new cycle
-    #
-    # This function is supposed to create an example configuration file
-    # for the new cycle. It uses PyXML to write the configuration, and
-    # exactly this causes a bit of trouble. PyXML is about the worst
-    # XML implementation I ever came accross... There are tons of things
-    # that it can't do. Not to mention the lack of any proper documentation.
-    #
-    # All in all, the resulting XML file is not too usable at the moment, 
-    # it's probably easier just copying one of the example cycles from
-    # SFrame/user/config and adjusting it to the user's needs...
-    #
-    # @param className Name of the analysis cycle. Can contain the namespace name.
-    # @param fileName  Optional parameter with the configuration file name
+    ## @short Function to create a backup of a file if it already exits.
+    # 
+    # This function checks for the exitence of filename. If it exists, 
+    # a warning is prined and the filename is moved to a location that has
+    # .backup appended to the original path.
+    # 
+    # @param fileName file path to check
     def Backup( self, filename ):
         """
         Check if the file exists. If it does, beck it up to file+".backup"
@@ -376,6 +392,7 @@ class FullCycleCreator:
     # @param namespace  Optional parameter with the name of the namespace to use
     # @param varlist  Optional parameter with a list of "Variable" objects for which to create declarations
     # @param create_output  Optional parameter for whether to create declarations for output variables
+    # @param kwargs Unused.
     def CreateHeader( self, className, headerName = "" , namespace = "", varlist = [], create_output = False, **kwargs):
         # Construct the file name if it has not been specified:
         if  not headerName:
@@ -437,6 +454,7 @@ class FullCycleCreator:
     # @param namespace  Optional parameter with the name of the namespace to use
     # @param varlist  Optional parameter with a list of "Variable" objects to be used by the cycle
     # @param create_output  Optional parameter for whether to produce code for output variables
+    # @param kwargs Unused.
     def CreateSource( self, className, sourceName = "", namespace = "", varlist = [], create_output = False, header = "", **kwargs ):
         # Construct the file name if it has not been specified:
         if sourceName == "":
@@ -534,6 +552,7 @@ class FullCycleCreator:
     # @param className Name of the analysis cycle. Can contain the namespace name.
     # @param linkdefName  Optional parameter with the LinkDef file name
     # @param namespace  Optional parameter with the name of the namespace to use
+    # @param kwargs Unused.
     def AddLinkDef( self, className, linkdefName = "LinkDef.h" , namespace = "", varlist = [], **kwargs):
         
         cycleName = className
@@ -589,7 +608,7 @@ class FullCycleCreator:
     # and adapts it for this analysis using PyXML. As this file is expected to
     # change in future updates this function may break. It may therefore be better to create something from scratch.
     # The advantage of this approach is that the resulting xml file works, and still
-    # contains all the comments of FirstCycle_config.xml, making it more usable.
+    # contains all the comments of FirstCycle_config.xml, making it more suitabel for beginners.
     # 
     #
     # @param className Name of the analysis cycle
@@ -599,6 +618,7 @@ class FullCycleCreator:
     # @param rootfile  Optional parameter with the name of an input root-file
     # @param treename  Optional parameter with the name of the input tree
     # @param outtree  Optional parameter with the name of the output tree if desired
+    # @param kwargs Unused.
     def CreateConfig( self, className, configName = "" , namespace = "", analysis = "MyAnalysis", rootfile = "my/root/file.root", treename = "InTreeName", outtree = "", **kwargs):
         # Construct the file name if it has not been specified:
         if configName == "":
@@ -732,6 +752,7 @@ class FullCycleCreator:
     # here already.
     #
     # @param directory The name of the directory where the file should be
+    # @param kwargs Unused.
     def AddJobConfig( self, config_directory, **kwargs):
         import os.path
         newfile = os.path.join( config_directory, "JobConfig.dtd" )
@@ -1018,6 +1039,8 @@ ClassImp( %(fullClassName)s );
 
 %(body)s
 """
+    ## @short Template for a new LinkDef file
+    #
     _Template_LinkDef = """// Dear emacs, this is -*- c++ -*-
 
 #ifdef __CINT__
