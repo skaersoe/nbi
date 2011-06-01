@@ -1,3 +1,11 @@
+>> NOTE: This repository is outdated. As of 2011-06-01 I have moved the developement
+>> of my python-tools to a separate repository:
+<<
+>>     git://github.com/MrMasterplan/SFrame_meta_tools.git
+>>
+>> So long and thanks for all the fish.
+>> /Simon
+
 A python script to create a full usable SFrame cycle.
 
 FullCycleCreators.py should be linked or copied to $SFRAME_DIR/python/.
