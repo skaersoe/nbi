@@ -1,5 +1,4 @@
-# This has to be sourced.
-
+# Source this file to gain access to the t3 tools
 
 
 previous_PWD=$PWD

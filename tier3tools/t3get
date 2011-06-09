@@ -1,21 +1,13 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-untitled.py
+t3get
 
 Created by Morten Dam Jørgensen on 2011-03-03.
 Copyright (c) 2011 Niels Bohr Institute. All rights reserved.
 """
-
-BASE_URL = "https://ftp1.ndgf.org:2881/atlas/disk/atlaslocalgroupdisk/dk%s"
-BASE_URL_STR = "https://ftp1.ndgf.org:2881/atlas/disk/atlaslocalgroupdisk/dk"
-
+from t3tools import T3Tools
 import sys
-import getopt
-import os
-
-import shlex, subprocess
-from getpass import getpass
 
 help_message = '''
 Download a file from the Tier 3 storage element.
@@ -23,56 +15,15 @@ Author: Morten Dam Jørgensen, 2011
 
 Examples:
 
-	t3get /user/username/rootfile.root myrootfile.root
+  t3get /user/username/rootfile.root myrootfile.root
 
 
 
 Installation:
 
-	You must have your usercert.pem and userkey.pem in the ~/.globus/ folder.
-	
+  You must have your usercert.pem and userkey.pem in the ~/.globus/ folder.
+  
 '''
-
-class NBIWebDAV(object):
-    """Communication with the Tier 3 storage element via WebDAV"""
-    def __init__(self, pw=""):
-        super(NBIWebDAV, self).__init__()
-        self.homedir = os.path.expanduser('~')
-        try:
-		    pw_file = open("%s/.globus/t3password" % self.homedir, "r")
-		    self.pw = pw_file.read()
-		    pw_file.close()
-        except:
-		    try:
-		        if open("%s/.globus/userkey.pem" % self.homedir, "r").read().find("ENCRYPTED") == -1:
-		            self.pw = ""
-		        else:
-		            self.pw = getpass("Enter GRID password: ")
-		            
-		    except:
-		        self.pw = getpass("Enter GRID password: ")
-
-    def get(self, filename, destination, overwrite=False):
-        """Download file"""
-
-        d = destination.split("/")  # In case of . as output, use the input file name (not very safe)
-        if d[-1] == ".":
-            d[-1] = filename.replace(BASE_URL_STR, "").split("/")[-1]
-        destination = "/".join(d)
-        
-        exe = 'curl -k --location-trusted --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -o %s' % (self.homedir, self.pw, self.homedir, filename, destination)
-
-        a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-        resp = a.communicate()[0]
-
-        return resp
-
-
-
-
-class Usage(Exception):
-	def __init__(self, msg):
-		self.msg = msg
 
 
 def main(argv=None):
@@ -80,7 +31,7 @@ def main(argv=None):
 	if len(sys.argv) < 2 or "-h" in sys.argv:
 		print help_message
 		return
-	wd = NBIWebDAV()
+	wd = T3Tools()
 	if len(sys.argv) == 2: sys.argv.append(".") # If no output file is given, assume the same name as the input file, and place it it the current directory.
 	if sys.argv[1][0] == "/":
 		fromf = sys.argv[1]
@@ -88,7 +39,7 @@ def main(argv=None):
 		fromf = "/" + sys.argv[1]
 		
 		
-	print wd.get(BASE_URL % fromf.replace(BASE_URL_STR, ""), sys.argv[2])
+	print wd.t3get(fromf, sys.argv[2])
 		
 
 

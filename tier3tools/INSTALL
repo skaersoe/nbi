@@ -8,8 +8,8 @@ Requirements:
 
 Place user certificate and private key in ~/.globus/
 
-Place the files in "bin" in the search path.
+Place the files in "bin" in the search path by sourcing setup.sh
+
 
 To avoid reentering the password every time, place a file called ~/.globus/t3password  (readable to you only:  chmod a-rw u+r ~/.globus/t3password) with your password.
 Alternatively, remove the password from your private key file.
-

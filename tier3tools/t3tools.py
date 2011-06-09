@@ -88,22 +88,8 @@ class T3Tools(object):
     BASE_URL_PATH = "/atlas/disk/atlaslocalgroupdisk/dk"
     
     help_message = '''
-    List folders on the Tier 3 storage element.
-    Author: Morten Dam Jørgensen, 2011.
-
-    Flags: 
-
-        -l :    Print date modified, file size and filenames (default)
-        -x :    Print SFrame XML input lines
-        -f :    Print full path
-        -r :    Print xroot path
-
-    Examples:
-    	t3ls /user/username
-    	t3ls -f /user/
-
-        Base url: %s
-        xroot base: %s
+    Base url: %s
+    xroot base: %s
     ''' % (BASE_URL_STR, BASE_SERVER_URL_XROOT + BASE_URL_PATH)
     
     def __init__(self, pw="", auto_completer=False):
@@ -126,6 +112,12 @@ class T3Tools(object):
 		    except:
 		        self.pw = getpass("Enter GRID password: ")
 		  
+    def t3rm(self, path):
+        """docstring for delete"""
+        path = self.BASE_URL % path.replace(self.BASE_URL_STR, "")
+        exe = 'curl -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem --request DELETE %s' %(self.homedir, self.pw, self.homedir, path)
+        a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        return a.communicate()[0]
 
 
     def t3ls(self, remote ):
@@ -220,18 +212,92 @@ class T3Tools(object):
         return resp
     
     
+    def t3put(self, filename, destination, overwrite=False):
+        """docstring for upload"""
+
+
+        d = destination.split("/")  # In case of . as output, use the input file name (not very safe)
+        if d[-1] == ".":
+            d[-1] = filename.split("/")[-1]
+
+        destination =  "/".join(d)
+        exe = 'curl -k --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -T %s' % (self.homedir, self.pw, self.homedir, destination, filename)
+
+        a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        resp = a.communicate()[0]
+
+        if resp.find("403") > -1 and overwrite:
+            inp = raw_input("File exists, overwrite? (y/n): ")
+            if str(inp) in ['y', 'yes', 'Y', 'YES', 'Yes']:
+                print self.t3rm(destination)
+                resp = 	 self.t3put(filename, destination)
+        elif resp.find("403") > -1 and not overwrite:
+            print "Failed, the file might already exist?"
+
+        return resp
+
+    
     def local_ls(self, local):
         """Local lookup"""
         # from glob import glob
         # print glob(local)
         # print "local" + str(os.listdir(os.path.expanduser(local)))
         if os.path.isdir(local) or os.path.isfile(local):
-            return os.listdir(os.path.expanduser(local))
+            out = []
+            for i in os.listdir(local):
+                if os.path.isdir(local + i):
+                    postfix = "/"
+                else:
+                    postfix = ""
+                out.append(local + i + postfix)
+            return out
+            # return [local + x + "/" for x in os.listdir(local)]
         else:
             return []
         
+    def t3mv(self, filename, destination, overwrite=False):
+        """docstring for move"""
+
+        filename = self.BASE_URL % filename.replace(self.BASE_URL_STR, "")
+        destination = self.BASE_URL % destination.replace(self.BASE_URL_STR, "")
+
+        exe = 'curl -ks  --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s --request MOVE --header "Destination: %s"' % (self.homedir, self.pw, self.homedir, filename, destination)
+
+
+        a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        resp = a.communicate()[0]
+
+        if resp.find("403") > -1 and overwrite:
+            inp = raw_input("File exists, overwrite? (y/n): ")
+            if str(inp) in ['y', 'yes', 'Y', 'YES', 'Yes']:
+                print self.t3rm(destination)
+                resp = self.t3put(filename, destination)
+        elif resp.find("403") > -1 and not overwrite:
+            print "Dammit"
+
+        return resp
+
+    def t3mkdir(self, path):
+        """docstring for mkdir"""
+        path = self.BASE_URL % path.replace(self.BASE_URL_STR, "")
+
+        exe = 'curl -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem -X MKCOL %s' %(self.homedir, self.pw, self.homedir, path)
+        a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        return a.communicate()[0]
+
     def autocompleter(self, args):
-        """docstring for autocompleter"""
+        """
+        The autocompleter method returns a list of possibilities for tab-completion,
+        based on the commandline arguments. 
+        
+            Typical uses:
+                To query the files on the storage element, call self.tls().
+                To query the local file system, use self.lcoal_ls().
+                
+                Always return a list of strings, withthe input-path prepended.
+        
+        Created: June 9, 2011, Morten <mdj@mdj.dk>
+        """
         self.auto_completer = True # Override user flags
         
         command = args[1]
@@ -242,6 +308,14 @@ class T3Tools(object):
         args_line = args_line.split(" ")
         if command == "t3ls":
             return self.t3ls(last_complete_string[0:last_complete_string.rfind("/")+1])
+        elif command == "t3rm":
+            return self.t3ls(last_complete_string[0:last_complete_string.rfind("/")+1])
+
+        elif command == "t3mv":
+            return self.t3ls(last_complete_string[0:last_complete_string.rfind("/")+1])
+
+        elif command == "t3mkdir":
+            return self.t3ls(last_complete_string[0:last_complete_string.rfind("/")+1])
             
         elif command == "t3get":
             if len(args_line) == 2:
@@ -250,31 +324,23 @@ class T3Tools(object):
             elif len(args_line) == 3:
                 # local completion
                 return self.local_ls(args_line[-1][0:args_line[-1].rfind("/")+1])
-                
+        elif command == "t3put":
+            if len(args_line) == 2:
+                return self.local_ls(args_line[-1][0:args_line[-1].rfind("/")+1])
+            elif len(args_line) == 3:
+                return self.t3ls(args_line[-1][0:args_line[-1].rfind("/")+1])
+        
         else:
             return []
-        
 
-        # method = getattr(self, command)
-        # 
-        # method_arguments =  inspect.getargspec(method)
-        # n_inp_args =  len(method_arguments.args) -1
-        # print n_inp_args, single_input  
-        # return method(complete_string[0:complete_string.rfind("/")+1])
-        return []
 
 def main():
     inval = sys.argv[-2]
 
-    # args_line = re.sub("\s+", " ", os.environ["COMP_LINE"])
-    # args_line = args_line.split(" ")
-    # inval = args_line[-1]
-
     # Initialise T3Tools for autocompletion
-
     t = T3Tools()
     words = t.autocompleter(sys.argv)
-    print words
+
     possibles = []
     for word in words:
         if word.find(inval) == 0:
@@ -294,8 +360,15 @@ def main():
     import os.path
     lcp = os.path.commonprefix(possibles)
     if lcp==inval:
+
         for word in possibles:
             print word
+            # w = word.replace(lcp[0:lcp.rfind("/")], "")
+            # if len(w) > 1:
+            #     print w
+            # else:
+            #     print word
+
     else:
         print lcp
 
