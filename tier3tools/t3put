@@ -49,10 +49,14 @@ def main(argv=None):
 			dest = BASE_URL % dire.replace(BASE_URL_STR, "") + filename
 
 			print "Transfering %s ..." % dest
-			print wd.t3put(filename, BASE_URL % dire.replace(BASE_URL_STR, "") + filename, overwrite=True)
+			s =  wd.t3put(filename, BASE_URL % dire.replace(BASE_URL_STR, "") + filename, overwrite=True)
+			if len(s) > 0:
+			    print s
 			
 	else:
-		print wd.t3put(sys.argv[1], BASE_URL % dire.replace(BASE_URL_STR, ""), overwrite=True)
+		s =  wd.t3put(sys.argv[1], BASE_URL % dire.replace(BASE_URL_STR, ""), overwrite=True)
+		if len(s) > 0:
+		    print s
 		
 
 

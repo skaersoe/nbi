@@ -43,7 +43,9 @@ def main(argv=None):
 	else:
 		fromf = "/" + sys.argv[1]
 		
-	print wd.t3mv(fromf, dire)
+	s =  wd.t3mv(fromf, dire)
+	if len(s) > 0:
+	    print s
 		
 
 if __name__ == "__main__":

@@ -38,7 +38,9 @@ def main(argv=None):
 			dire = i
 		else:
 			dire = "/" + i
-		print wd.t3mkdir(dire)
+		s = wd.t3mkdir(dire)
+		if len(s) > 0:
+		    print s
 
 
 if __name__ == "__main__":
