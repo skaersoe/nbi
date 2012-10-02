@@ -2,6 +2,20 @@ NBI HEP Tier 3 storage element client tools
 
 A suite of command lines tools for manipulating and querying the storage element.
 
+Requirements:
+* cURL 
+* Python 2.3 or higher (2.7 recommended)
+
+
+Place user certificate and private key in ~/.globus/
+Place the files in "bin" in the search path by sourcing setup.sh
+
+
+To avoid reentering the password every time, place a file called ~/.globus/t3password  (readable to you only:  chmod a-rw u+r ~/.globus/t3password) with your password.
+Alternatively, remove the password from your private key file.
+
+
+
 
 
 

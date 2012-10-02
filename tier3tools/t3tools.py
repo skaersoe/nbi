@@ -186,6 +186,10 @@ class T3Tools(object):
             elif "x" in self.flags or "X" in self.flags:
                 if len(line["name"]) > 1 and not line["name"][-1] == "/":
                     print '<In FileName="%s%s" Lumi="1.0" />' % (self.BASE_SERVER_URL_XROOT, line["name"])
+            elif "c" in self.flags or "C" in self.flags: # SampleHolder
+                if len(line["name"]) > 1 and not line["name"][-1] == "/":
+                    print '<In FileName="%s%s" Lumi="1.0" />' % (self.BASE_SERVER_URL_XROOT, line["name"])
+            
             else:
 
                 if not line.has_key("size") or not line["size"]:  ## format file size string to match width
