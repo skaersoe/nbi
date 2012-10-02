@@ -151,7 +151,7 @@ class T3Tools(object):
             if i.has_key("getcontentlength"):
                 if not i[u'getcontentlength'] == "":
                     ou["size"] =  int(i[u'getcontentlength'])
-                    size_buff_len = max(size_buff_len, len(str(int(i[u'getcontentlength'])/1000000)))
+                    size_buff_len = max(size_buff_len, len("%0.2fM" % (int(i[u'getcontentlength'])/1000000.0)))
                 else:
                     ou["size"] = 0
 					
@@ -172,9 +172,11 @@ class T3Tools(object):
 
             return out
             
-        for line in result2:
+        print remote
+        for line in result2[1:]:
             dm = datetime.datetime.fromtimestamp(time.mktime(time.strptime(line["modified"], "%a, %d %b %Y %H:%M:%S %Z")))
-
+            # print line
+            # continue
             if "f" in self.flags: # Full path listing
                 print "%s%s" % (self.BASE_SERVER_URL, line["name"])
             elif "r" in self.flags: # xpath path listing
@@ -186,11 +188,15 @@ class T3Tools(object):
                     print '<In FileName="%s%s" Lumi="1.0" />' % (self.BASE_SERVER_URL_XROOT, line["name"])
             else:
 
-                if hasattr(str(), "format"): # Check if we can use the str.format() method (available in Python > 2.6)
-                    print ("{0}  {1:>%d} MB  {2}" % (size_buff_len)).format(str(dm), line["size"]/1000000,line["name"].replace(self.BASE_URL_PATH, ""))# line["name"][line["name"].find("/user/"):])
+                if not line.has_key("size") or not line["size"]:  ## format file size string to match width
+                    line["size"] = "dir"# * (size_buff_len+1)
+                    line["size"] = " " * (size_buff_len - len(line["size"])) + line["size"]
                 else:
-                    # Fallback to old string formatting style (ugly)
-                    print "%s\t%s MB\t%s" % (str(dm), line["size"]/1000000, line["name"].replace(self.BASE_URL_PATH, "")) 
+                    line["size"] = "%0.2fM" % (line["size"]/1000000.0)
+                    line["size"] = " " * (size_buff_len - len(line["size"])) + line["size"]
+                if remote[0] == "/": remote[1:]
+                print "%s  %s  %s" % (str(dm), line["size"],line["name"].replace(self.BASE_URL_PATH, "").replace(remote, ""))
+
 
 
 
