@@ -115,7 +115,7 @@ class T3Tools(object):
     def t3rm(self, path):
         """docstring for delete"""
         path = self.BASE_URL % path.replace(self.BASE_URL_STR, "")
-        exe = 'curl -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem --request DELETE %s' %(self.homedir, self.pw, self.homedir, path)
+        exe = 'curl -3 -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem --request DELETE %s' %(self.homedir, self.pw, self.homedir, path)
         a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         return a.communicate()[0]
 
@@ -125,7 +125,7 @@ class T3Tools(object):
         path_org = remote
         path = self.BASE_URL % remote.replace(self.BASE_URL_STR, "")
         
-        exe = 'curl -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem  --data "<xml>" --header "Depth: 1" --header "Content-Type: text/xml" --request PROPFIND %s' % (self.homedir, self.pw, self.homedir, path)
+        exe = 'curl -3 -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem  --data "<xml>" --header "Depth: 1" --header "Content-Type: text/xml" --request PROPFIND %s' % (self.homedir, self.pw, self.homedir, path)
         a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         text =  a.communicate()[0]
 
@@ -214,7 +214,7 @@ class T3Tools(object):
             d[-1] = filename.replace(self.BASE_URL_STR, "").split("/")[-1]
         local = "/".join(d)
 
-        exe = 'curl -k --location-trusted --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -o %s' % (self.homedir, self.pw, self.homedir, filename, local)
+        exe = 'curl -3 -k --location-trusted --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -o %s' % (self.homedir, self.pw, self.homedir, filename, local)
 
         a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         resp = a.communicate()[0]
@@ -231,7 +231,7 @@ class T3Tools(object):
             d[-1] = filename.split("/")[-1]
 
         destination =  "/".join(d)
-        exe = 'curl -k --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -T %s' % (self.homedir, self.pw, self.homedir, destination, filename)
+        exe = 'curl -3 -k --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s -T %s' % (self.homedir, self.pw, self.homedir, destination, filename)
 
         a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         resp = a.communicate()[0]
@@ -271,7 +271,7 @@ class T3Tools(object):
         filename = self.BASE_URL % filename.replace(self.BASE_URL_STR, "")
         destination = self.BASE_URL % destination.replace(self.BASE_URL_STR, "")
 
-        exe = 'curl -ks  --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s --request MOVE --header "Destination: %s"' % (self.homedir, self.pw, self.homedir, filename, destination)
+        exe = 'curl -3 -ks  --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem %s --request MOVE --header "Destination: %s"' % (self.homedir, self.pw, self.homedir, filename, destination)
 
 
         a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
@@ -291,7 +291,7 @@ class T3Tools(object):
         """docstring for mkdir"""
         path = self.BASE_URL % path.replace(self.BASE_URL_STR, "")
 
-        exe = 'curl -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem -X MKCOL %s' %(self.homedir, self.pw, self.homedir, path)
+        exe = 'curl -3 -ks --cert %s/.globus/usercert.pem:%s --key %s/.globus/userkey.pem -X MKCOL %s' %(self.homedir, self.pw, self.homedir, path)
         a = subprocess.Popen(shlex.split(exe), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         return a.communicate()[0]
 
